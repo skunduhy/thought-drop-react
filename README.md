@@ -8,6 +8,29 @@ Write a page for someone and share it. Every page looks like a sheet from a book
 - `/write` is the writing page. A title and signature are optional, and each line break starts a new paragraph.
 - To publish, the writer signs in with Google. **Only admin accounts can publish.** The page is saved in Cloud Firestore under a random seven-character code made from `A-Z` and `0-9`.
 - The shareable link is just that code, for example `https://your-site/7KQ2M9A`. Readers don't need to sign in, and the reader page works on phones.
+- `/admin` lists every published page with how many times it was opened and when it was last seen. `/admin/7KQ2M9A` shows the reader activity for one page. Both are admin-only.
+
+Routing uses [React Router](https://reactrouter.com/) (`BrowserRouter` in `src/main.jsx`, routes in `src/App.jsx`).
+
+## Reader activity
+
+When someone opens a published page, the app records a **visit** in `pages/{code}/visits/{visitId}`:
+
+| Field                       | Description                                                                 |
+| --------------------------- | --------------------------------------------------------------------------- |
+| `startedAt`                 | When the page was opened (server time)                                      |
+| `lastSeenAt`                | Last update from the reader; once `ended` is true, this is when they closed it |
+| `activeMs`                  | Time the page was actually visible (time on another tab or app isn't counted) |
+| `maxScroll`                 | How far down they scrolled, 0–100%                                          |
+| `scrolls`, `taps`           | Number of scroll gestures and taps/clicks                                   |
+| `hiddenCount`               | How many times they switched away                                           |
+| `events`                    | Timeline: opened, reached the end, switched away, came back, closed (up to 60) |
+| `ended`                     | `true` once the page was closed                                             |
+| `device`, `browser`, `screen` | Mobile/tablet/desktop, browser name, screen size                          |
+
+While the page is visible, the visit is updated every 10 seconds, and again when the reader switches away or closes it. The update sent on close uses `fetch(..., { keepalive: true })` so it's still delivered while the tab is closing. A reader who is offline, or whose browser is killed, may lose up to the last 10 seconds. The author previewing their own page isn't counted.
+
+The rules let anyone record a visit to an existing page, but only admins can read visits. Updates can only increase the counters, and `activeMs` can't exceed the real time since the visit started. The reader page includes a short notice that the sender can see when the page is read.
 
 Pages are stored in the Firestore collection `pages`, with the code as the document ID:
 
@@ -19,7 +42,7 @@ Pages are stored in the Firestore collection `pages`, with the code as the docum
 | `authorUid` | Firebase Auth UID of the writer          |
 | `createdAt` | Server timestamp                         |
 
-The security rules in [`firestore.rules`](firestore.rules) allow anyone to read a single page by its code. They don't allow listing pages. Only admins can create pages, they must create them as themselves, and published pages can't be edited or deleted.
+The security rules in [`firestore.rules`](firestore.rules) allow anyone to read a single page by its code. Only admins can list pages. Only admins can create pages, they must create them as themselves, and published pages can't be edited or deleted.
 
 ## Admins
 

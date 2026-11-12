@@ -1,4 +1,15 @@
-import { doc, getDoc, runTransaction, serverTimestamp } from 'firebase/firestore'
+import {
+  collection,
+  doc,
+  getCountFromServer,
+  getDoc,
+  getDocs,
+  limit,
+  orderBy,
+  query,
+  runTransaction,
+  serverTimestamp,
+} from 'firebase/firestore'
 import { db } from './firebase.js'
 
 export const MAX_MESSAGE_LENGTH = 5000
@@ -56,5 +67,45 @@ export async function fetchPage(code) {
     title: typeof data.title === 'string' ? data.title : '',
     message: data.message,
     sender: typeof data.sender === 'string' ? data.sender : '',
+    authorUid: typeof data.authorUid === 'string' ? data.authorUid : '',
+    createdAt: data.createdAt?.toDate?.() ?? null,
   }
+}
+
+export async function listPagesWithActivity() {
+  const snapshot = await getDocs(query(collection(db, 'pages'), orderBy('createdAt', 'desc'), limit(100)))
+  return Promise.all(
+    snapshot.docs.map(async (pageDoc) => {
+      const data = pageDoc.data()
+      const visits = collection(db, 'pages', pageDoc.id, 'visits')
+      const [countSnapshot, latestSnapshot] = await Promise.all([
+        getCountFromServer(visits),
+        getDocs(query(visits, orderBy('lastSeenAt', 'desc'), limit(1))),
+      ])
+      return {
+        code: pageDoc.id,
+        title: data.title || '',
+        firstLine: (data.message || '').split('\n')[0].slice(0, 120),
+        createdAt: data.createdAt?.toDate?.() ?? null,
+        visitCount: countSnapshot.data().count,
+        lastSeenAt: latestSnapshot.docs[0]?.data().lastSeenAt?.toDate?.() ?? null,
+      }
+    }),
+  )
+}
+
+export async function fetchVisits(code) {
+  const snapshot = await getDocs(
+    query(collection(db, 'pages', code, 'visits'), orderBy('startedAt', 'desc'), limit(200)),
+  )
+  return snapshot.docs.map((visitDoc) => {
+    const data = visitDoc.data()
+    return {
+      id: visitDoc.id,
+      ...data,
+      startedAt: data.startedAt?.toDate?.() ?? null,
+      lastSeenAt: data.lastSeenAt?.toDate?.() ?? null,
+      events: Array.isArray(data.events) ? data.events : [],
+    }
+  })
 }

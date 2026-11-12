@@ -12,10 +12,14 @@ service cloud.firestore {
         ];
     }
 
+    function isCounter(next, previous) {
+      return next is int && next >= previous && next <= 1000000;
+    }
+
     match /pages/{code} {
-      // Anyone with the link can read a single page; nobody can list pages.
+      // Anyone with the link can read a single page; only admins can list pages.
       allow get: if true;
-      allow list: if false;
+      allow list: if isAdmin();
 
       allow create: if isAdmin()
         && code.matches('^[A-Z0-9]{7}$')
@@ -33,6 +37,54 @@ service cloud.firestore {
 
       // Published pages are permanent.
       allow update, delete: if false;
+
+      // Reader activity. Readers don't sign in, so anyone can record a visit to an existing page,
+      // but only admins can read visits. Updates may only grow the counters, and active time can't
+      // exceed the real time since the visit started (plus a little slack for clock/network delay).
+      match /visits/{visitId} {
+        allow get, list: if isAdmin();
+
+        allow create: if exists(/databases/$(database)/documents/pages/$(code))
+          && request.resource.data.keys().hasOnly([
+            'startedAt', 'lastSeenAt', 'activeMs', 'maxScroll', 'scrolls', 'taps',
+            'hiddenCount', 'events', 'ended', 'device', 'browser', 'screen'
+          ])
+          && request.resource.data.startedAt == request.time
+          && request.resource.data.lastSeenAt == request.time
+          && request.resource.data.activeMs == 0
+          && request.resource.data.maxScroll is int
+          && request.resource.data.maxScroll >= 0
+          && request.resource.data.maxScroll <= 100
+          && request.resource.data.scrolls == 0
+          && request.resource.data.taps == 0
+          && request.resource.data.hiddenCount == 0
+          && request.resource.data.events is list
+          && request.resource.data.events.size() <= 60
+          && request.resource.data.ended == false
+          && request.resource.data.device in ['mobile', 'tablet', 'desktop']
+          && request.resource.data.browser is string
+          && request.resource.data.browser.size() <= 40
+          && request.resource.data.screen is string
+          && request.resource.data.screen.size() <= 20;
+
+        allow update: if request.resource.data.diff(resource.data).affectedKeys().hasOnly([
+            'lastSeenAt', 'activeMs', 'maxScroll', 'scrolls', 'taps', 'hiddenCount', 'events', 'ended'
+          ])
+          && request.resource.data.lastSeenAt == request.time
+          && isCounter(request.resource.data.activeMs, resource.data.activeMs)
+          && request.resource.data.activeMs
+            <= request.time.toMillis() - resource.data.startedAt.toMillis() + 15000
+          && isCounter(request.resource.data.maxScroll, resource.data.maxScroll)
+          && request.resource.data.maxScroll <= 100
+          && isCounter(request.resource.data.scrolls, resource.data.scrolls)
+          && isCounter(request.resource.data.taps, resource.data.taps)
+          && isCounter(request.resource.data.hiddenCount, resource.data.hiddenCount)
+          && request.resource.data.events is list
+          && request.resource.data.events.size() <= 60
+          && request.resource.data.ended is bool;
+
+        allow delete: if false;
+      }
     }
   }
 }

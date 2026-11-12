@@ -1,5 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { Link, Navigate, Route, Routes, useLocation, useParams } from 'react-router'
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { AdminView } from './Admin.jsx'
 import { auth, googleProvider, isFirebaseConfigured } from './firebase.js'
 import {
   fetchPage,
@@ -10,6 +12,7 @@ import {
   publishPage,
   SAMPLE_CODE,
 } from './pages.js'
+import { startVisitTracking } from './tracking.js'
 import './App.css'
 
 const SAMPLE_PAGE = {
@@ -24,18 +27,6 @@ const SAMPLE_PAGE = {
 }
 
 const SETUP_MESSAGE = 'Thought Drop isn’t connected to Firebase yet. Add your Firebase settings to .env.local and restart the app.'
-
-function readRoute() {
-  const path = window.location.pathname.replace(/\/+$/, '') || '/'
-  if (path === '/') return { name: 'landing' }
-  if (path === '/write') return { name: 'write' }
-
-  const code = path.slice(1)
-  if (PAGE_CODE_PATTERN.test(code)) return { name: 'read', code }
-
-  window.history.replaceState(null, '', '/')
-  return { name: 'landing' }
-}
 
 function toParagraphs(text) {
   return text
@@ -100,7 +91,15 @@ function BookPage({ code, heading, children }) {
   )
 }
 
-function ReadingPage({ code, page, isSample, onWrite }) {
+function WriteLink() {
+  return (
+    <Link className="text-button" to="/write">
+      Write a page of your own <ArrowIcon />
+    </Link>
+  )
+}
+
+function ReadingPage({ code, page, isSample }) {
   return (
     <section className="reader">
       {isSample && <p className="sample-badge">A sample page — this is what your reader will see</p>}
@@ -118,14 +117,13 @@ function ReadingPage({ code, page, isSample, onWrite }) {
         </div>
         <p className="page-signature">— {page.sender || 'someone who thought of you'}</p>
       </BookPage>
-      <button className="text-button" type="button" onClick={onWrite}>
-        Write a page of your own <ArrowIcon />
-      </button>
+      {!isSample && <p className="reading-notice">The sender can see when this page is opened and how long it’s read.</p>}
+      <WriteLink />
     </section>
   )
 }
 
-function NoticePage({ code, heading, title, children, onWrite }) {
+function NoticePage({ code, heading, title, children }) {
   return (
     <section className="reader">
       <BookPage code={code} heading={heading}>
@@ -133,14 +131,18 @@ function NoticePage({ code, heading, title, children, onWrite }) {
         <div className="fleuron" aria-hidden="true">❦</div>
         <div className="page-text page-text-plain">{children}</div>
       </BookPage>
-      <button className="text-button" type="button" onClick={onWrite}>
-        Write a page of your own <ArrowIcon />
-      </button>
+      <WriteLink />
     </section>
   )
 }
 
-function Reader({ code, onWrite }) {
+function ReaderRoute({ user, authReady }) {
+  const { code } = useParams()
+  if (!PAGE_CODE_PATTERN.test(code)) return <Navigate to="/" replace />
+  return <Reader key={code} code={code} user={user} authReady={authReady} />
+}
+
+function Reader({ code, user, authReady }) {
   const isSample = code === SAMPLE_CODE
   const [result, setResult] = useState({ code: null, status: 'loading', page: null })
 
@@ -165,7 +167,16 @@ function Reader({ code, onWrite }) {
     document.title = title ? `${title} · Thought Drop` : 'A page for you · Thought Drop'
   }, [isSample, result.page])
 
-  if (isSample) return <ReadingPage code={code} page={SAMPLE_PAGE} isSample onWrite={onWrite} />
+  const loadedPage = result.code === code && result.status === 'ready' ? result.page : null
+  // The author previewing their own page shouldn't count as a reader visit.
+  const shouldTrack = Boolean(loadedPage) && authReady && user?.uid !== loadedPage?.authorUid
+
+  useEffect(() => {
+    if (!shouldTrack) return undefined
+    return startVisitTracking(code)
+  }, [code, shouldTrack])
+
+  if (isSample) return <ReadingPage code={code} page={SAMPLE_PAGE} isSample />
 
   let status = result.code === code ? result.status : 'loading'
   if (!isFirebaseConfigured) status = 'error'
@@ -188,7 +199,7 @@ function Reader({ code, onWrite }) {
 
   if (status === 'missing') {
     return (
-      <NoticePage code={code} heading="A missing page" title="This page couldn’t be found." onWrite={onWrite}>
+      <NoticePage code={code} heading="A missing page" title="This page couldn’t be found.">
         <p>Check that the link was copied in full, or ask the person who sent it to share it again.</p>
       </NoticePage>
     )
@@ -196,7 +207,7 @@ function Reader({ code, onWrite }) {
 
   if (status === 'error') {
     return (
-      <NoticePage code={code} heading="A page for you" title="This page couldn’t be opened." onWrite={onWrite}>
+      <NoticePage code={code} heading="A page for you" title="This page couldn’t be opened.">
         <p>
           {isFirebaseConfigured
             ? 'Something went wrong while fetching it. Check your connection and refresh the page.'
@@ -206,7 +217,7 @@ function Reader({ code, onWrite }) {
     )
   }
 
-  return <ReadingPage code={code} page={result.page} onWrite={onWrite} />
+  return <ReadingPage code={code} page={result.page} />
 }
 
 function Composer({ user, authReady, onSignIn }) {
@@ -388,6 +399,9 @@ function Composer({ user, authReady, onSignIn }) {
                 Open the page <ArrowIcon />
               </a>
             </div>
+            <Link className="text-button write-another" to={`/admin/${publishedCode}`}>
+              See when it’s read <ArrowIcon />
+            </Link>
             <button className="text-button write-another" type="button" onClick={writeAnother}>
               Write another page <ArrowIcon />
             </button>
@@ -413,7 +427,7 @@ function Composer({ user, authReady, onSignIn }) {
   )
 }
 
-function Landing({ onWrite, onSample }) {
+function Landing() {
   useEffect(() => {
     document.title = 'Thought Drop · Little pages for the people you love'
   }, [])
@@ -432,12 +446,12 @@ function Landing({ onWrite, onSample }) {
           Write the words you’ve been holding on to. We’ll bind them into a page you can send to the one who should read them.
         </p>
         <div className="cover-actions">
-          <a className="primary-button" href="/write" onClick={onWrite}>
+          <Link className="primary-button" to="/write">
             Write a page <ArrowIcon />
-          </a>
-          <a className="secondary-link" href={`/${SAMPLE_CODE}`} onClick={onSample}>
+          </Link>
+          <Link className="secondary-link" to={`/${SAMPLE_CODE}`}>
             Read a sample page
-          </a>
+          </Link>
         </div>
         <div className="cover-rule" aria-hidden="true" />
       </div>
@@ -460,16 +474,59 @@ function Landing({ onWrite, onSample }) {
   )
 }
 
+function ScrollToTop() {
+  const { pathname } = useLocation()
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+  return null
+}
+
+function AdminRoute(props) {
+  const { code } = useParams()
+  if (code && !PAGE_CODE_PATTERN.test(code)) return <Navigate to="/admin" replace />
+  return <AdminView code={code} {...props} />
+}
+
+function Masthead({ user, authReady, onSignIn }) {
+  const { pathname } = useLocation()
+  const readerCode = pathname.match(/^\/([A-Z0-9]{7})\/?$/)?.[1]
+  const showAccount = !readerCode && isFirebaseConfigured && authReady
+
+  return (
+    <header className="masthead">
+      <Link className="brand" to="/" title="Back to the cover">
+        thought<em>drop</em>
+      </Link>
+      {readerCode && (
+        <span className="masthead-code">
+          Page <span>{readerCode}</span>
+        </span>
+      )}
+      {showAccount &&
+        (user ? (
+          <div className="account">
+            <Link className="account-link" to="/admin">
+              Activity
+            </Link>
+            {user.photoURL && <img className="account-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />}
+            <span className="account-name">{user.displayName || user.email}</span>
+            <button className="account-button" type="button" onClick={() => signOut(auth)}>
+              Sign out
+            </button>
+          </div>
+        ) : (
+          <button className="account-button" type="button" onClick={() => onSignIn().catch(() => {})}>
+            Sign in
+          </button>
+        ))}
+    </header>
+  )
+}
+
 function App() {
-  const [route, setRoute] = useState(readRoute)
   const [user, setUser] = useState(null)
   const [authReady, setAuthReady] = useState(!isFirebaseConfigured)
-
-  useEffect(() => {
-    const syncRoute = () => setRoute(readRoute())
-    window.addEventListener('popstate', syncRoute)
-    return () => window.removeEventListener('popstate', syncRoute)
-  }, [])
 
   useEffect(() => {
     if (!auth) return undefined
@@ -479,62 +536,25 @@ function App() {
     })
   }, [])
 
-  function navigate(path) {
-    return (event) => {
-      event?.preventDefault()
-      window.history.pushState(null, '', path)
-      setRoute(readRoute())
-      window.scrollTo(0, 0)
-    }
-  }
-
   async function signIn() {
     const credential = await signInWithPopup(auth, googleProvider)
     return credential.user
   }
 
-  const showAccount = route.name !== 'read' && isFirebaseConfigured && authReady
-
-  let content
-  if (route.name === 'write') {
-    content = <Composer user={user} authReady={authReady} onSignIn={signIn} />
-  } else if (route.name === 'read') {
-    content = <Reader key={route.code} code={route.code} onWrite={navigate('/write')} />
-  } else {
-    content = <Landing onWrite={navigate('/write')} onSample={navigate(`/${SAMPLE_CODE}`)} />
-  }
+  const authProps = { user, authReady, onSignIn: signIn }
 
   return (
     <main className="desk">
-      <header className="masthead">
-        <a className="brand" href="/" onClick={navigate('/')} title="Back to the cover">
-          thought<em>drop</em>
-        </a>
-        {route.name === 'read' && (
-          <span className="masthead-code">
-            Page <span>{route.code}</span>
-          </span>
-        )}
-        {showAccount &&
-          (user ? (
-            <div className="account">
-              {user.photoURL && <img className="account-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />}
-              <span className="account-name">{user.displayName || user.email}</span>
-              <button className="account-button" type="button" onClick={() => signOut(auth)}>
-                Sign out
-              </button>
-            </div>
-          ) : (
-            <button
-              className="account-button"
-              type="button"
-              onClick={() => signIn().catch(() => {})}
-            >
-              Sign in
-            </button>
-          ))}
-      </header>
-      {content}
+      <ScrollToTop />
+      <Masthead {...authProps} />
+      <Routes>
+        <Route index element={<Landing />} />
+        <Route path="write" element={<Composer {...authProps} />} />
+        <Route path="admin" element={<AdminRoute {...authProps} />} />
+        <Route path="admin/:code" element={<AdminRoute {...authProps} />} />
+        <Route path=":code" element={<ReaderRoute user={user} authReady={authReady} />} />
+        <Route path="*" element={<Navigate to="/" replace />} />
+      </Routes>
       <footer className="desk-footer">Made for the words you almost didn’t send.</footer>
     </main>
   )
