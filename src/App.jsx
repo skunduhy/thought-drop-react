@@ -1,14 +1,18 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
+import { auth, googleProvider, isFirebaseConfigured } from './firebase.js'
+import {
+  fetchPage,
+  MAX_MESSAGE_LENGTH,
+  MAX_SENDER_LENGTH,
+  MAX_TITLE_LENGTH,
+  PAGE_CODE_PATTERN,
+  publishPage,
+  SAMPLE_CODE,
+} from './pages.js'
 import './App.css'
 
-const MAX_MESSAGE_LENGTH = 5000
-const MAX_TITLE_LENGTH = 80
-const MAX_SENDER_LENGTH = 40
-const CODE_LENGTH = 7
-const CODE_ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-const CODE_PATTERN = /^\/([A-Z0-9]{7})\/?$/
-const SAMPLE_CODE = 'SAMPLE1'
-const SAMPLE_NOTE = {
+const SAMPLE_PAGE = {
   title: 'For the friend who stayed',
   message: [
     'I have been meaning to write this for a long time, and somehow the right moment never came. So I am deciding that this ordinary afternoon is the right moment.',
@@ -19,69 +23,18 @@ const SAMPLE_NOTE = {
   sender: 'Meera',
 }
 
-function createPageCode() {
-  let code = ''
-  while (code.length < CODE_LENGTH || code === SAMPLE_CODE) {
-    if (code.length === CODE_LENGTH) code = ''
-    for (const byte of window.crypto.getRandomValues(new Uint8Array(16))) {
-      // 252 is the largest multiple of 36 below 256; skipping higher bytes keeps every character equally likely.
-      if (byte < 252 && code.length < CODE_LENGTH) {
-        code += CODE_ALPHABET[byte % CODE_ALPHABET.length]
-      }
-    }
-  }
-  return code
-}
+const SETUP_MESSAGE = 'Thought Drop isn’t connected to Firebase yet. Add your Firebase settings to .env.local and restart the app.'
 
-function resolvePageCode() {
-  const match = window.location.pathname.match(CODE_PATTERN)
-  if (match) return match[1]
+function readRoute() {
+  const path = window.location.pathname.replace(/\/+$/, '') || '/'
+  if (path === '/') return { name: 'landing' }
+  if (path === '/write') return { name: 'write' }
 
-  if (window.location.pathname !== '/') window.history.replaceState(null, '', '/')
-  return null
-}
+  const code = path.slice(1)
+  if (PAGE_CODE_PATTERN.test(code)) return { name: 'read', code }
 
-function encodeNote(note) {
-  const bytes = new TextEncoder().encode(JSON.stringify(note))
-  let binary = ''
-  bytes.forEach((byte) => {
-    binary += String.fromCharCode(byte)
-  })
-  return btoa(binary).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '')
-}
-
-// Returns undefined when there is no note in the link, null when the note is unreadable.
-function decodeNote(hash) {
-  const encoded = new URLSearchParams(hash.slice(1)).get('note')
-  if (encoded === null) return undefined
-
-  try {
-    const base64 = encoded.replaceAll('-', '+').replaceAll('_', '/')
-    const binary = atob(base64.padEnd(Math.ceil(base64.length / 4) * 4, '='))
-    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
-    const note = JSON.parse(new TextDecoder().decode(bytes))
-    if (
-      typeof note?.message !== 'string' ||
-      !note.message.trim() ||
-      note.message.length > MAX_MESSAGE_LENGTH
-    ) {
-      return null
-    }
-    return {
-      message: note.message,
-      title: typeof note.title === 'string' ? note.title.slice(0, MAX_TITLE_LENGTH) : '',
-      sender: typeof note.sender === 'string' ? note.sender.slice(0, MAX_SENDER_LENGTH) : '',
-    }
-  } catch {
-    return null
-  }
-}
-
-function readLocation() {
-  const code = resolvePageCode()
-  if (!code) return { code: null, note: undefined }
-  const note = decodeNote(window.location.hash)
-  return { code, note: note === undefined && code === SAMPLE_CODE ? SAMPLE_NOTE : note }
+  window.history.replaceState(null, '', '/')
+  return { name: 'landing' }
 }
 
 function toParagraphs(text) {
@@ -90,6 +43,20 @@ function toParagraphs(text) {
     .split(/\n+/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean)
+}
+
+function describeAuthError(error) {
+  switch (error?.code) {
+    case 'auth/popup-closed-by-user':
+    case 'auth/cancelled-popup-request':
+      return ''
+    case 'auth/popup-blocked':
+      return 'Your browser blocked the Google sign-in window. Allow pop-ups for this site and try again.'
+    case 'auth/unauthorized-domain':
+      return 'This website isn’t on the list of sites allowed to use Google sign-in. Add it under Firebase Authentication → Settings → Authorized domains.'
+    default:
+      return 'Google sign-in didn’t work. Please try again.'
+  }
 }
 
 function ArrowIcon() {
@@ -109,6 +76,17 @@ function CopyIcon() {
   )
 }
 
+function GoogleIcon() {
+  return (
+    <svg aria-hidden="true" viewBox="0 0 48 48" className="google-icon">
+      <path fill="#FFC107" d="M43.6 20.5H42V20H24v8h11.3C33.7 32.7 29.2 36 24 36c-6.6 0-12-5.4-12-12s5.4-12 12-12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 12.9 4 4 12.9 4 24s8.9 20 20 20 20-8.9 20-20c0-1.3-.1-2.4-.4-3.5z" />
+      <path fill="#FF3D00" d="m6.3 14.7 6.6 4.8C14.7 15.1 19 12 24 12c3.1 0 5.8 1.2 7.9 3.1l5.7-5.7C34 6.1 29.3 4 24 4 16.3 4 9.7 8.3 6.3 14.7z" />
+      <path fill="#4CAF50" d="M24 44c5.2 0 9.9-2 13.4-5.2l-6.2-5.2C29.2 35.1 26.7 36 24 36c-5.2 0-9.6-3.3-11.3-7.9l-6.5 5C9.5 39.6 16.2 44 24 44z" />
+      <path fill="#1976D2" d="M43.6 20.5H42V20H24v8h11.3c-.8 2.2-2.2 4.2-4.1 5.6l6.2 5.2C37 39.2 44 34 44 24c0-1.3-.1-2.4-.4-3.5z" />
+    </svg>
+  )
+}
+
 function BookPage({ code, heading, children }) {
   return (
     <article className="book-page">
@@ -117,75 +95,193 @@ function BookPage({ code, heading, children }) {
         <span>{heading}</span>
       </p>
       {children}
-      <p className="folio">— {code} —</p>
+      {code && <p className="folio">— {code} —</p>}
     </article>
   )
 }
 
-function App() {
-  const [page, setPage] = useState(readLocation)
+function ReadingPage({ code, page, isSample, onWrite }) {
+  return (
+    <section className="reader">
+      {isSample && <p className="sample-badge">A sample page — this is what your reader will see</p>}
+      <BookPage code={code} heading="A page for you">
+        {page.title ? (
+          <h1 className="page-title">{page.title}</h1>
+        ) : (
+          <h1 className="visually-hidden">A page for you</h1>
+        )}
+        <div className="fleuron" aria-hidden="true">❦</div>
+        <div className="page-text">
+          {toParagraphs(page.message).map((paragraph, index) => (
+            <p key={index}>{paragraph}</p>
+          ))}
+        </div>
+        <p className="page-signature">— {page.sender || 'someone who thought of you'}</p>
+      </BookPage>
+      <button className="text-button" type="button" onClick={onWrite}>
+        Write a page of your own <ArrowIcon />
+      </button>
+    </section>
+  )
+}
+
+function NoticePage({ code, heading, title, children, onWrite }) {
+  return (
+    <section className="reader">
+      <BookPage code={code} heading={heading}>
+        <h1 className="page-title">{title}</h1>
+        <div className="fleuron" aria-hidden="true">❦</div>
+        <div className="page-text page-text-plain">{children}</div>
+      </BookPage>
+      <button className="text-button" type="button" onClick={onWrite}>
+        Write a page of your own <ArrowIcon />
+      </button>
+    </section>
+  )
+}
+
+function Reader({ code, onWrite }) {
+  const isSample = code === SAMPLE_CODE
+  const [result, setResult] = useState({ code: null, status: 'loading', page: null })
+
+  useEffect(() => {
+    if (isSample || !isFirebaseConfigured) return undefined
+
+    let cancelled = false
+    fetchPage(code)
+      .then((page) => {
+        if (!cancelled) setResult({ code, status: page ? 'ready' : 'missing', page })
+      })
+      .catch(() => {
+        if (!cancelled) setResult({ code, status: 'error', page: null })
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [code, isSample])
+
+  useEffect(() => {
+    const title = isSample ? SAMPLE_PAGE.title : result.page?.title
+    document.title = title ? `${title} · Thought Drop` : 'A page for you · Thought Drop'
+  }, [isSample, result.page])
+
+  if (isSample) return <ReadingPage code={code} page={SAMPLE_PAGE} isSample onWrite={onWrite} />
+
+  let status = result.code === code ? result.status : 'loading'
+  if (!isFirebaseConfigured) status = 'error'
+
+  if (status === 'loading') {
+    return (
+      <section className="reader" aria-busy="true">
+        <BookPage code={code} heading="A page for you">
+          <p className="loading-text" role="status">Turning to your page…</p>
+          <div className="loading-lines" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+          </div>
+        </BookPage>
+      </section>
+    )
+  }
+
+  if (status === 'missing') {
+    return (
+      <NoticePage code={code} heading="A missing page" title="This page couldn’t be found." onWrite={onWrite}>
+        <p>Check that the link was copied in full, or ask the person who sent it to share it again.</p>
+      </NoticePage>
+    )
+  }
+
+  if (status === 'error') {
+    return (
+      <NoticePage code={code} heading="A page for you" title="This page couldn’t be opened." onWrite={onWrite}>
+        <p>
+          {isFirebaseConfigured
+            ? 'Something went wrong while fetching it. Check your connection and refresh the page.'
+            : SETUP_MESSAGE}
+        </p>
+      </NoticePage>
+    )
+  }
+
+  return <ReadingPage code={code} page={result.page} onWrite={onWrite} />
+}
+
+function Composer({ user, authReady, onSignIn }) {
   const [title, setTitle] = useState('')
   const [message, setMessage] = useState('')
   const [sender, setSender] = useState('')
-  const [shareUrl, setShareUrl] = useState('')
+  const [publishing, setPublishing] = useState(false)
+  const [publishedCode, setPublishedCode] = useState('')
   const [feedback, setFeedback] = useState('')
   const [error, setError] = useState('')
   const messageRef = useRef(null)
 
-  const { code, note } = page
+  const shareUrl = publishedCode ? `${window.location.origin}/${publishedCode}` : ''
   const canNativeShare = typeof navigator.share === 'function'
+  const isPublished = Boolean(publishedCode)
 
   useEffect(() => {
-    const syncPage = () => {
-      setPage(readLocation())
-      setShareUrl('')
-      setFeedback('')
-    }
-    window.addEventListener('popstate', syncPage)
-    window.addEventListener('hashchange', syncPage)
-    return () => {
-      window.removeEventListener('popstate', syncPage)
-      window.removeEventListener('hashchange', syncPage)
-    }
+    document.title = 'Write a page · Thought Drop'
   }, [])
-
-  useEffect(() => {
-    if (!code) {
-      document.title = 'Thought Drop · Little pages for the people you love'
-      return
-    }
-    document.title = note?.title ? `${note.title} · Thought Drop` : `Page ${code} · Thought Drop`
-  }, [code, note])
 
   useLayoutEffect(() => {
     const textarea = messageRef.current
     if (!textarea) return
     textarea.style.height = 'auto'
     textarea.style.height = `${textarea.scrollHeight}px`
-  }, [message, note])
+  }, [message])
 
   function editDraft(setter) {
     return (event) => {
       setter(event.target.value)
-      setShareUrl('')
-      setFeedback('')
       setError('')
     }
   }
 
-  function createLink(event) {
+  async function handlePublish(event) {
     event.preventDefault()
+    if (publishing || isPublished) return
+
     const cleanMessage = message.trim()
     if (!cleanMessage) {
-      setError('Write a few words on the page before sharing it.')
+      setError('Write a few words on the page before publishing it.')
       messageRef.current?.focus()
       return
     }
+    if (!isFirebaseConfigured) {
+      setError(SETUP_MESSAGE)
+      return
+    }
 
-    const encoded = encodeNote({ message: cleanMessage, title: title.trim(), sender: sender.trim() })
-    setShareUrl(`${window.location.origin}/${code}#note=${encoded}`)
-    setFeedback('')
     setError('')
+    setPublishing(true)
+    try {
+      let author = user
+      if (!author) {
+        try {
+          author = await onSignIn()
+        } catch (signInError) {
+          setError(describeAuthError(signInError))
+          return
+        }
+      }
+
+      const cleanSender = sender.trim() || author.displayName?.slice(0, MAX_SENDER_LENGTH) || ''
+      const code = await publishPage(
+        { title: title.trim(), message: cleanMessage, sender: cleanSender },
+        author,
+      )
+      setSender(cleanSender)
+      setPublishedCode(code)
+      setFeedback('')
+    } catch {
+      setError('Your page couldn’t be published. Check your connection and try again.')
+    } finally {
+      setPublishing(false)
+    }
   }
 
   async function copyLink() {
@@ -205,209 +301,234 @@ function App() {
     }
   }
 
-  function openSample(event) {
-    event.preventDefault()
-    window.history.pushState(null, '', `/${SAMPLE_CODE}`)
-    setPage({ code: SAMPLE_CODE, note: SAMPLE_NOTE })
-    window.scrollTo(0, 0)
-  }
-
-  function goHome(event) {
-    event.preventDefault()
-    window.history.pushState(null, '', '/')
-    setPage({ code: null, note: undefined })
-    window.scrollTo(0, 0)
-  }
-
-  function startNewPage() {
-    const nextCode = createPageCode()
-    window.history.pushState(null, '', `/${nextCode}`)
-    setPage({ code: nextCode, note: undefined })
-    window.scrollTo(0, 0)
+  function writeAnother() {
     setTitle('')
     setMessage('')
     setSender('')
-    setShareUrl('')
+    setPublishedCode('')
     setFeedback('')
     setError('')
+    window.scrollTo(0, 0)
   }
 
-  let content
-  if (!code) {
-    content = (
-      <section className="landing" aria-labelledby="landing-title">
-        <div className="book-cover">
-          <p className="cover-kicker">A small book of one page</p>
-          <div className="cover-rule" aria-hidden="true" />
-          <h1 id="landing-title" className="cover-title">
-            Thought<em>Drop</em>
-          </h1>
-          <p className="cover-subtitle">Little pages for the people you love.</p>
-          <div className="fleuron cover-fleuron" aria-hidden="true">❦</div>
-          <p className="cover-lede">
-            Write the words you’ve been holding on to. We’ll bind them into a page you can send to the one who should read them.
-          </p>
-          <div className="cover-actions">
-            <button className="primary-button" type="button" onClick={startNewPage}>
-              Write a page <ArrowIcon />
-            </button>
-            <a className="secondary-link" href={`/${SAMPLE_CODE}`} onClick={openSample}>
-              Read a sample page
-            </a>
-          </div>
-          <div className="cover-rule" aria-hidden="true" />
-        </div>
+  let publishLabel = 'Publish this page'
+  if (publishing) publishLabel = 'Publishing…'
+  else if (authReady && !user) publishLabel = 'Sign in with Google to publish'
 
-        <ol className="contents" aria-label="How it works">
-          <li>
-            <span className="contents-numeral">I.</span>
-            <span className="contents-text"><strong>Write</strong> as many paragraphs as you need.</span>
-          </li>
-          <li>
-            <span className="contents-numeral">II.</span>
-            <span className="contents-text"><strong>Share</strong> the link to your page.</span>
-          </li>
-          <li>
-            <span className="contents-numeral">III.</span>
-            <span className="contents-text"><strong>They read</strong> it like a page from a book.</span>
-          </li>
-        </ol>
-      </section>
-    )
-  } else if (note) {
-    content = (
-      <section className="reader">
-        {code === SAMPLE_CODE && <p className="sample-badge">A sample page — this is what your reader will see</p>}
-        <BookPage code={code} heading="A page for you">
-          {note.title ? (
-            <h1 className="page-title">{note.title}</h1>
-          ) : (
-            <h1 className="visually-hidden">A page for you</h1>
-          )}
-          <div className="fleuron" aria-hidden="true">❦</div>
-          <div className="page-text">
-            {toParagraphs(note.message).map((paragraph, index) => (
-              <p key={index}>{paragraph}</p>
-            ))}
-          </div>
-          <p className="page-signature">— {note.sender || 'someone who thought of you'}</p>
-        </BookPage>
-        <button className="text-button" type="button" onClick={startNewPage}>
-          Write a page of your own <ArrowIcon />
-        </button>
-      </section>
-    )
-  } else if (note === null) {
-    content = (
-      <section className="reader">
-        <BookPage code={code} heading="A torn page">
-          <h1 className="page-title">This page couldn’t be read.</h1>
-          <div className="fleuron" aria-hidden="true">❦</div>
-          <div className="page-text">
-            <p>The link may have been cut short while it was being copied. Ask the sender to share the full link again.</p>
-          </div>
-        </BookPage>
-        <button className="text-button" type="button" onClick={startNewPage}>
-          Write a new page <ArrowIcon />
-        </button>
-      </section>
-    )
-  } else {
-    content = (
-      <form className="composer" onSubmit={createLink}>
-        <BookPage code={code} heading="A page for someone">
-          <label className="visually-hidden" htmlFor="page-title">Title (optional)</label>
+  return (
+    <form className="composer" onSubmit={handlePublish}>
+      <BookPage code={publishedCode} heading={isPublished ? 'Published' : 'A page for someone'}>
+        <label className="visually-hidden" htmlFor="page-title">Title (optional)</label>
+        <input
+          id="page-title"
+          className="page-title page-title-input"
+          type="text"
+          placeholder="A title, if you like"
+          maxLength={MAX_TITLE_LENGTH}
+          value={title}
+          readOnly={isPublished}
+          onChange={editDraft(setTitle)}
+        />
+        <div className="fleuron" aria-hidden="true">❦</div>
+        <label className="visually-hidden" htmlFor="page-message">Your message</label>
+        <textarea
+          id="page-message"
+          ref={messageRef}
+          className="page-text page-textarea"
+          placeholder={'Dear you,\nBegin wherever feels right. Press Enter to start a new paragraph…'}
+          maxLength={MAX_MESSAGE_LENGTH}
+          rows={8}
+          value={message}
+          readOnly={isPublished}
+          onChange={editDraft(setMessage)}
+        />
+        <div className="page-signature signature-field">
+          <span aria-hidden="true">—</span>
+          <label className="visually-hidden" htmlFor="page-sender">Your name (optional)</label>
           <input
-            id="page-title"
-            className="page-title page-title-input"
+            id="page-sender"
             type="text"
-            placeholder="A title, if you like"
-            maxLength={MAX_TITLE_LENGTH}
-            value={title}
-            onChange={editDraft(setTitle)}
+            placeholder={user?.displayName || 'your name (optional)'}
+            maxLength={MAX_SENDER_LENGTH}
+            value={sender}
+            readOnly={isPublished}
+            onChange={editDraft(setSender)}
           />
-          <div className="fleuron" aria-hidden="true">❦</div>
-          <label className="visually-hidden" htmlFor="page-message">Your message</label>
-          <textarea
-            id="page-message"
-            ref={messageRef}
-            className="page-text page-textarea"
-            placeholder={'Dear you,\nBegin wherever feels right. Press Enter to start a new paragraph…'}
-            maxLength={MAX_MESSAGE_LENGTH}
-            rows={8}
-            value={message}
-            onChange={editDraft(setMessage)}
-          />
-          <div className="page-signature signature-field">
-            <span aria-hidden="true">—</span>
-            <label className="visually-hidden" htmlFor="page-sender">Your name (optional)</label>
-            <input
-              id="page-sender"
-              type="text"
-              placeholder="your name (optional)"
-              maxLength={MAX_SENDER_LENGTH}
-              value={sender}
-              onChange={editDraft(setSender)}
-            />
-          </div>
-        </BookPage>
-
-        <div className="page-actions">
-          <p className="page-hint">
-            Each line break starts a new paragraph · {message.length} / {MAX_MESSAGE_LENGTH}
-          </p>
-          {error && <p className="form-error" role="alert">{error}</p>}
-          <button className="primary-button" type="submit">
-            Share this page <ArrowIcon />
-          </button>
-          <p className="privacy-note">Your words travel inside the link — anyone who has it can read this page.</p>
-          <a className="preview-link sample-link" href={`/${SAMPLE_CODE}`} onClick={openSample}>
-            See a sample page <ArrowIcon />
-          </a>
-
-          {shareUrl && (
-            <div className="share-result" aria-live="polite">
-              <p className="share-result-title">Your page is ready to send.</p>
-              <div className="share-link-row">
-                <input
-                  aria-label="Shareable page link"
-                  readOnly
-                  value={shareUrl}
-                  onFocus={(event) => event.target.select()}
-                />
-                <button className="secondary-button" type="button" onClick={copyLink}>
-                  <CopyIcon /> Copy
-                </button>
-                {canNativeShare && (
-                  <button className="secondary-button ghost" type="button" onClick={nativeShare}>
-                    Send…
-                  </button>
-                )}
-              </div>
-              <div className="share-result-footer">
-                <span role="status">{feedback}</span>
-                <a className="preview-link" href={shareUrl} target="_blank" rel="noreferrer">
-                  Preview as reader <ArrowIcon />
-                </a>
-              </div>
-            </div>
-          )}
         </div>
-      </form>
-    )
+      </BookPage>
+
+      <div className="page-actions">
+        {isPublished ? (
+          <div className="share-result" aria-live="polite">
+            <p className="share-result-title">Your page is published.</p>
+            <p className="share-result-note">Send this link to your reader. They won’t need to sign in.</p>
+            <div className="share-link-row">
+              <input
+                aria-label="Shareable page link"
+                readOnly
+                value={shareUrl}
+                onFocus={(event) => event.target.select()}
+              />
+              <button className="secondary-button" type="button" onClick={copyLink}>
+                <CopyIcon /> Copy
+              </button>
+              {canNativeShare && (
+                <button className="secondary-button ghost" type="button" onClick={nativeShare}>
+                  Send…
+                </button>
+              )}
+            </div>
+            <div className="share-result-footer">
+              <span role="status">{feedback}</span>
+              <a className="preview-link" href={shareUrl} target="_blank" rel="noreferrer">
+                Open the page <ArrowIcon />
+              </a>
+            </div>
+            <button className="text-button write-another" type="button" onClick={writeAnother}>
+              Write another page <ArrowIcon />
+            </button>
+          </div>
+        ) : (
+          <>
+            <p className="page-hint">
+              Each line break starts a new paragraph · {message.length} / {MAX_MESSAGE_LENGTH}
+            </p>
+            {error && <p className="form-error" role="alert">{error}</p>}
+            <button className="primary-button" type="submit" disabled={publishing || !authReady}>
+              {authReady && !user && !publishing && <GoogleIcon />}
+              {publishLabel}
+              {(user || publishing) && <ArrowIcon />}
+            </button>
+            <p className="privacy-note">
+              You sign in with Google to publish. Your reader just opens the link — anyone with it can read the page.
+            </p>
+          </>
+        )}
+      </div>
+    </form>
+  )
+}
+
+function Landing({ onWrite, onSample }) {
+  useEffect(() => {
+    document.title = 'Thought Drop · Little pages for the people you love'
+  }, [])
+
+  return (
+    <section className="landing" aria-labelledby="landing-title">
+      <div className="book-cover">
+        <p className="cover-kicker">A small book of one page</p>
+        <div className="cover-rule" aria-hidden="true" />
+        <h1 id="landing-title" className="cover-title">
+          Thought<em>Drop</em>
+        </h1>
+        <p className="cover-subtitle">Little pages for the people you love.</p>
+        <div className="fleuron cover-fleuron" aria-hidden="true">❦</div>
+        <p className="cover-lede">
+          Write the words you’ve been holding on to. We’ll bind them into a page you can send to the one who should read them.
+        </p>
+        <div className="cover-actions">
+          <a className="primary-button" href="/write" onClick={onWrite}>
+            Write a page <ArrowIcon />
+          </a>
+          <a className="secondary-link" href={`/${SAMPLE_CODE}`} onClick={onSample}>
+            Read a sample page
+          </a>
+        </div>
+        <div className="cover-rule" aria-hidden="true" />
+      </div>
+
+      <ol className="contents" aria-label="How it works">
+        <li>
+          <span className="contents-numeral">I.</span>
+          <span className="contents-text"><strong>Write</strong> as many paragraphs as you need.</span>
+        </li>
+        <li>
+          <span className="contents-numeral">II.</span>
+          <span className="contents-text"><strong>Publish</strong> it after signing in with Google.</span>
+        </li>
+        <li>
+          <span className="contents-numeral">III.</span>
+          <span className="contents-text"><strong>They read</strong> it from a short link — no sign-in.</span>
+        </li>
+      </ol>
+    </section>
+  )
+}
+
+function App() {
+  const [route, setRoute] = useState(readRoute)
+  const [user, setUser] = useState(null)
+  const [authReady, setAuthReady] = useState(!isFirebaseConfigured)
+
+  useEffect(() => {
+    const syncRoute = () => setRoute(readRoute())
+    window.addEventListener('popstate', syncRoute)
+    return () => window.removeEventListener('popstate', syncRoute)
+  }, [])
+
+  useEffect(() => {
+    if (!auth) return undefined
+    return onAuthStateChanged(auth, (nextUser) => {
+      setUser(nextUser)
+      setAuthReady(true)
+    })
+  }, [])
+
+  function navigate(path) {
+    return (event) => {
+      event?.preventDefault()
+      window.history.pushState(null, '', path)
+      setRoute(readRoute())
+      window.scrollTo(0, 0)
+    }
+  }
+
+  async function signIn() {
+    const credential = await signInWithPopup(auth, googleProvider)
+    return credential.user
+  }
+
+  const showAccount = route.name !== 'read' && isFirebaseConfigured && authReady
+
+  let content
+  if (route.name === 'write') {
+    content = <Composer user={user} authReady={authReady} onSignIn={signIn} />
+  } else if (route.name === 'read') {
+    content = <Reader key={route.code} code={route.code} onWrite={navigate('/write')} />
+  } else {
+    content = <Landing onWrite={navigate('/write')} onSample={navigate(`/${SAMPLE_CODE}`)} />
   }
 
   return (
     <main className="desk">
       <header className="masthead">
-        <a className="brand" href="/" onClick={goHome} title="Back to the cover">
+        <a className="brand" href="/" onClick={navigate('/')} title="Back to the cover">
           thought<em>drop</em>
         </a>
-        {code && (
+        {route.name === 'read' && (
           <span className="masthead-code">
-            Page <span>{code}</span>
+            Page <span>{route.code}</span>
           </span>
         )}
+        {showAccount &&
+          (user ? (
+            <div className="account">
+              {user.photoURL && <img className="account-avatar" src={user.photoURL} alt="" referrerPolicy="no-referrer" />}
+              <span className="account-name">{user.displayName || user.email}</span>
+              <button className="account-button" type="button" onClick={() => signOut(auth)}>
+                Sign out
+              </button>
+            </div>
+          ) : (
+            <button
+              className="account-button"
+              type="button"
+              onClick={() => signIn().catch(() => {})}
+            >
+              Sign in
+            </button>
+          ))}
       </header>
       {content}
       <footer className="desk-footer">Made for the words you almost didn’t send.</footer>

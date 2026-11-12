@@ -137,11 +137,15 @@
   margin: 0;
 }
 
+.page-text p:first-child {
+  display: flow-root;
+}
+
 .page-text p + p {
   text-indent: 1.6em;
 }
 
-.reader .page-text p:first-child::first-letter {
+.reader .page-text:not(.page-text-plain) p:first-child::first-letter {
   float: left;
   padding: 6px 8px 0 0;
   color: #8a5a3c;
@@ -256,7 +260,21 @@
   color: #fbf4e6;
   font-size: 15px;
   font-weight: 600;
+  text-decoration: none;
   transition: background 150ms ease, transform 150ms ease;
+}
+
+.primary-button:disabled {
+  cursor: progress;
+  opacity: 0.75;
+}
+
+.google-icon {
+  width: 18px;
+  height: 18px;
+  padding: 2px;
+  border-radius: 50%;
+  background: #fff;
 }
 
 .primary-button:hover,
@@ -559,18 +577,132 @@
   white-space: nowrap;
 }
 
+.account {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.account-avatar {
+  width: 28px;
+  height: 28px;
+  border: 1px solid #d3c5ae;
+  border-radius: 50%;
+}
+
+.account-name {
+  max-width: 180px;
+  overflow: hidden;
+  color: #5b4535;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-button {
+  padding: 6px 12px;
+  border: 1px solid #c9b89e;
+  border-radius: 999px;
+  background: transparent;
+  color: #5b3d2a;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+
+.account-button:hover {
+  background: #efe6d6;
+}
+
+.loading-text {
+  margin: 8px 0 28px;
+  color: #8c7b69;
+  font-family: var(--font-book);
+  font-size: 20px;
+  font-style: italic;
+  text-align: center;
+}
+
+.loading-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.loading-lines span {
+  height: 12px;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #f0e7d8 0%, #e6dac6 50%, #f0e7d8 100%);
+  background-size: 200% 100%;
+  animation: page-shimmer 1.4s ease-in-out infinite;
+}
+
+.loading-lines span:last-child {
+  width: 60%;
+}
+
+@keyframes page-shimmer {
+  from {
+    background-position: 100% 0;
+  }
+
+  to {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-lines span {
+    animation: none;
+  }
+}
+
+.share-result-note {
+  margin: -6px 0 14px;
+  color: #7a6a58;
+  font-size: 13px;
+}
+
+.write-another {
+  margin-top: 14px;
+  padding: 4px 0;
+  font-size: 17px;
+}
+
+.composer [readonly] {
+  cursor: default;
+}
+
 @media (max-width: 640px) {
   .desk {
-    padding: 0 14px;
+    padding: 0 12px;
   }
 
   .masthead {
-    padding: 18px 0 22px;
+    padding: 16px 0 18px;
+  }
+
+  .brand {
+    font-size: 22px;
+  }
+
+  .masthead-code {
+    font-size: 10px;
+  }
+
+  .account-name {
+    display: none;
   }
 
   .book-page {
     min-height: auto;
-    padding: 28px 24px 24px 34px;
+    padding: 24px 20px 22px 28px;
+    box-shadow:
+      1px 1px 0 #efe7d8,
+      2px 2px 0 #e1d5bf,
+      3px 3px 0 #d9cbb2,
+      0 18px 36px -14px rgba(60, 40, 20, 0.35);
   }
 
   .book-cover {
@@ -578,8 +710,16 @@
   }
 
   .running-head {
-    margin-bottom: 32px;
+    margin-bottom: 26px;
     font-size: 12px;
+  }
+
+  .page-title {
+    font-size: 28px;
+  }
+
+  .fleuron {
+    margin: 12px 0 20px;
   }
 
   .page-text,
@@ -588,7 +728,42 @@
   }
 
   .page-text {
+    line-height: 1.65;
     text-align: left;
+  }
+
+  .page-text p + p {
+    text-indent: 1.2em;
+  }
+
+  .reader .page-text:not(.page-text-plain) p:first-child::first-letter {
+    padding: 4px 6px 0 0;
+    font-size: 3em;
+  }
+
+  .page-signature {
+    margin-top: 28px;
+  }
+
+  .folio {
+    margin-top: 28px;
+  }
+
+  .text-button {
+    margin-top: 22px;
+  }
+
+  .primary-button {
+    width: 100%;
+    min-width: 0;
+  }
+
+  .book-cover .primary-button {
+    width: auto;
+  }
+
+  .share-result {
+    padding: 16px;
   }
 
   .share-link-row {
@@ -597,5 +772,15 @@
 
   .share-link-row input {
     flex-basis: 100%;
+  }
+
+  .share-link-row .secondary-button {
+    flex: 1;
+  }
+
+  .desk-footer {
+    padding: 36px 0 22px;
+    font-size: 14px;
+    text-align: center;
   }
 }
