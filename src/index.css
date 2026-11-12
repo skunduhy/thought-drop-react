@@ -1,16 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Lora:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap');
 
 :root {
-  font-family: 'DM Sans', sans-serif;
-  --font-display: 'Lora', Georgia, serif;
+  --font-book: 'EB Garamond', Garamond, 'Times New Roman', serif;
+  font-family: 'DM Sans', system-ui, sans-serif;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  font-optical-sizing: auto;
-  font-weight: 400;
-  color: #24211f;
-  background: #faf8f4;
+  color: #3a2e24;
+  background: #e8dfcf;
 }
 
 * {
@@ -23,21 +21,15 @@ body {
   margin: 0;
 }
 
-button,
-input,
-textarea {
-  font-family: inherit;
-}
-
 button:focus-visible,
 a:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 2px solid #c96e4b;
+  outline: 2px solid #8a5a3c;
   outline-offset: 3px;
 }
 
 ::selection {
-  background: #f3d9ca;
-  color: #35251d;
+  background: #ecd9bf;
+  color: #2f241b;
 }
