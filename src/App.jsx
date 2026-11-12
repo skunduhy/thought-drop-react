@@ -277,8 +277,12 @@ function Composer({ user, authReady, onSignIn }) {
       setSender(cleanSender)
       setPublishedCode(code)
       setFeedback('')
-    } catch {
-      setError('Your page couldn’t be published. Check your connection and try again.')
+    } catch (publishError) {
+      setError(
+        publishError?.code === 'permission-denied'
+          ? `${auth.currentUser?.email || 'This account'} isn’t allowed to publish. Only the admin can publish pages — sign out and use the admin’s Google account.`
+          : 'Your page couldn’t be published. Check your connection and try again.',
+      )
     } finally {
       setPublishing(false)
     }
@@ -400,7 +404,7 @@ function Composer({ user, authReady, onSignIn }) {
               {(user || publishing) && <ArrowIcon />}
             </button>
             <p className="privacy-note">
-              You sign in with Google to publish. Your reader just opens the link — anyone with it can read the page.
+              Only the admin can publish, after signing in with Google. Readers just open the link — anyone with it can read the page.
             </p>
           </>
         )}
@@ -445,7 +449,7 @@ function Landing({ onWrite, onSample }) {
         </li>
         <li>
           <span className="contents-numeral">II.</span>
-          <span className="contents-text"><strong>Publish</strong> it after signing in with Google.</span>
+          <span className="contents-text"><strong>Publish</strong> it with the admin’s Google account.</span>
         </li>
         <li>
           <span className="contents-numeral">III.</span>

@@ -2,12 +2,22 @@ rules_version = '2';
 
 service cloud.firestore {
   match /databases/{database}/documents {
+    // Only these Google accounts can publish pages. Add or remove emails here (lowercase),
+    // then deploy the rules or edit them in Firebase console → Firestore Database → Rules.
+    function isAdmin() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email.lower() in [
+          'sample@example.com'
+        ];
+    }
+
     match /pages/{code} {
       // Anyone with the link can read a single page; nobody can list pages.
       allow get: if true;
       allow list: if false;
 
-      allow create: if request.auth != null
+      allow create: if isAdmin()
         && code.matches('^[A-Z0-9]{7}$')
         && code != 'SAMPLE1'
         && request.resource.data.keys().hasOnly(['title', 'message', 'sender', 'authorUid', 'createdAt'])

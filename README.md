@@ -6,7 +6,7 @@ Write a page for someone and share it. Every page looks like a sheet from a book
 
 - `/` is a book-cover landing page with two choices: **Write a page** or **Read a sample page** (`/SAMPLE1`, built into the app).
 - `/write` is the writing page. A title and signature are optional, and each line break starts a new paragraph.
-- To publish, the writer signs in with Google. The page is saved in Cloud Firestore under a random seven-character code made from `A-Z` and `0-9`.
+- To publish, the writer signs in with Google. **Only admin accounts can publish.** The page is saved in Cloud Firestore under a random seven-character code made from `A-Z` and `0-9`.
 - The shareable link is just that code, for example `https://your-site/7KQ2M9A`. Readers don't need to sign in, and the reader page works on phones.
 
 Pages are stored in the Firestore collection `pages`, with the code as the document ID:
@@ -19,7 +19,24 @@ Pages are stored in the Firestore collection `pages`, with the code as the docum
 | `authorUid` | Firebase Auth UID of the writer          |
 | `createdAt` | Server timestamp                         |
 
-The security rules in [`firestore.rules`](firestore.rules) allow anyone to read a single page by its code. They don't allow listing pages. Only signed-in users can create pages, they must create them as themselves, and published pages can't be edited or deleted.
+The security rules in [`firestore.rules`](firestore.rules) allow anyone to read a single page by its code. They don't allow listing pages. Only admins can create pages, they must create them as themselves, and published pages can't be edited or deleted.
+
+## Admins
+
+The admin list is hardcoded in [`firestore.rules`](firestore.rules), in the `isAdmin()` function:
+
+```
+request.auth.token.email.lower() in [
+  'sample@example.com'
+]
+```
+
+Replace `sample@example.com` with the admin's Google email. To add more admins, separate the emails with commas, for example `'a@gmail.com', 'b@gmail.com'`. Use lowercase. You can change the list in either of two ways:
+
+- Edit the file and run `npx firebase-tools deploy --only firestore:rules`.
+- Edit the rules in **Firebase console → Firestore Database → Rules** and click **Publish**. If you do, copy the same change into `firestore.rules`; otherwise your next deploy from this project will overwrite it.
+
+Anyone else who signs in can't publish: the app shows a message saying only the admin can publish pages.
 
 ## Firebase setup
 
