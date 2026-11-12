@@ -94,9 +94,39 @@ npm run dev
 
 ## Deploy
 
-[`firebase.json`](firebase.json) serves `dist/` and rewrites every path to `index.html`, so links like `/7KQ2M9A` load the app:
+[`firebase.json`](firebase.json) serves `dist/` and rewrites every path to `index.html`, so links like `/7KQ2M9A` load the app. `firebase-tools` is a dev dependency, so `npx firebase` uses the version pinned in `package-lock.json`.
+
+To deploy by hand:
 
 ```sh
 npm run build
-npx firebase-tools deploy
+npx firebase deploy --only hosting,firestore:rules
 ```
+
+### GitHub Actions
+
+[`.github/workflows/firebase-deploy.yml`](.github/workflows/firebase-deploy.yml) runs on every push to `main`, and you can also start it from the **Actions** tab (**Run workflow**). It installs dependencies, lints, builds with your Firebase config, and deploys Hosting and the Firestore rules.
+
+One-time setup:
+
+1. **Create a service account.** In Google Cloud console → **IAM & Admin → Service accounts** for your Firebase project, create one with these roles:
+   - Firebase Hosting Admin
+   - Firebase Rules Admin
+   - API Keys Viewer
+   - Service Usage Consumer
+
+   Open the account → **Keys → Add key → JSON** and download the key file.
+2. **Add the secret and variables in GitHub.** Go to **Settings → Environments → New environment** and name it `production`. Add:
+
+   | Type     | Name                         | Value                                   |
+   | -------- | ---------------------------- | --------------------------------------- |
+   | Secret   | `FIREBASE_SERVICE_ACCOUNT`   | The full contents of the JSON key file  |
+   | Variable | `VITE_FIREBASE_API_KEY`      | From your Firebase web app config       |
+   | Variable | `VITE_FIREBASE_AUTH_DOMAIN`  | e.g. `your-project.firebaseapp.com`     |
+   | Variable | `VITE_FIREBASE_PROJECT_ID`   | e.g. `your-project`                     |
+   | Variable | `VITE_FIREBASE_APP_ID`       | From your Firebase web app config       |
+
+   The web config values end up in the public JavaScript bundle anyway, so they're variables. Only the service account key is a secret. If any of these are missing, the workflow stops at the first step and lists them.
+3. **Allow Google sign-in on the live site.** In Firebase console → **Authentication → Settings → Authorized domains**, make sure `your-project.web.app`, `your-project.firebaseapp.com` and any custom domain are listed.
+
+The deploy publishes `firestore.rules` from this repository. That includes the admin list, so change admins in the file and push, rather than only editing the rules in the Firebase console.
