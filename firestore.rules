@@ -17,14 +17,16 @@ service cloud.firestore {
     }
 
     match /pages/{code} {
-      // Anyone with the link can read a single page; only admins can list pages.
-      allow get: if true;
+      // Anyone with the link can read a published page (or find that a code doesn't exist);
+      // unpublished pages are visible only to admins. Only admins can list pages.
+      allow get: if resource == null || resource.data.get('published', false) == true || isAdmin();
       allow list: if isAdmin();
 
       allow create: if isAdmin()
         && code.matches('^[A-Z0-9]{7}$')
         && code != 'SAMPLE1'
-        && request.resource.data.keys().hasOnly(['title', 'message', 'sender', 'authorUid', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['title', 'message', 'sender', 'authorUid', 'published', 'createdAt'])
+        && request.resource.data.published == true
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0
@@ -35,8 +37,11 @@ service cloud.firestore {
         && request.resource.data.sender.size() <= 40
         && request.resource.data.createdAt == request.time;
 
-      // Published pages are permanent.
-      allow update, delete: if false;
+      // Admins can unpublish or republish a page (only the `published` flag changes), or delete it.
+      allow update: if isAdmin()
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['published'])
+        && request.resource.data.published is bool;
+      allow delete: if isAdmin();
 
       // Reader activity. Readers don't sign in, so anyone can record a visit to an existing page,
       // but only admins can read visits. Updates may only grow the counters, and active time can't
@@ -44,7 +49,7 @@ service cloud.firestore {
       match /visits/{visitId} {
         allow get, list: if isAdmin();
 
-        allow create: if exists(/databases/$(database)/documents/pages/$(code))
+        allow create: if get(/databases/$(database)/documents/pages/$(code)).data.get('published', false) == true
           && request.resource.data.keys().hasOnly([
             'startedAt', 'lastSeenAt', 'activeMs', 'maxScroll', 'scrolls', 'taps',
             'hiddenCount', 'events', 'ended', 'device', 'browser', 'screen', 'visitorId'
@@ -88,7 +93,7 @@ service cloud.firestore {
           && request.resource.data.events.size() <= 60
           && request.resource.data.ended is bool;
 
-        allow delete: if false;
+        allow delete: if isAdmin();
       }
     }
   }

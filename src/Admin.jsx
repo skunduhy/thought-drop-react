@@ -1,6 +1,12 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router'
-import { fetchPage, fetchVisits, listPagesWithActivity } from './pages.js'
+import { Link, useNavigate } from 'react-router'
+import {
+  deletePage,
+  fetchPage,
+  fetchVisits,
+  listPagesWithActivity,
+  setPagePublished,
+} from './pages.js'
 
 const LIVE_WINDOW_MS = 25000
 const FINISHED_SCROLL_PERCENT = 95
@@ -128,6 +134,7 @@ function PagesLedger({ user }) {
                   <span className="ledger-row-title">{page.title || page.firstLine || 'Untitled page'}</span>
                   <span className="ledger-row-meta">
                     <code>{page.code}</code> · published {formatDateTime(page.createdAt)}
+                    {!page.published && <span className="unpublished-badge"> Unpublished</span>}
                   </span>
                 </span>
                 <span className="ledger-row-stats">
@@ -208,7 +215,10 @@ function VisitCard({ visit, number }) {
 }
 
 function PageActivity({ code, user }) {
+  const navigate = useNavigate()
   const [refreshCount, setRefreshCount] = useState(0)
+  const [busy, setBusy] = useState(false)
+  const [actionError, setActionError] = useState('')
   const result = useAdminData(
     () => Promise.all([fetchPage(code), fetchVisits(code)]),
     `${code}:${user.uid}:${refreshCount}`,
@@ -219,6 +229,31 @@ function PageActivity({ code, user }) {
 
   const [page, visits] = result.data
   if (!page) return <p className="ledger-status">There’s no page with the code {code}.</p>
+
+  async function setPublished(published) {
+    setBusy(true)
+    setActionError('')
+    try {
+      await setPagePublished(code, published)
+      setRefreshCount((n) => n + 1)
+    } catch {
+      setActionError('That didn’t work. Check your connection and try again.')
+    }
+    setBusy(false)
+  }
+
+  async function handleDelete() {
+    if (!window.confirm('Delete this page and all of its reader activity? This can’t be undone.')) return
+    setBusy(true)
+    setActionError('')
+    try {
+      await deletePage(code)
+      navigate('/admin')
+    } catch {
+      setActionError('The page couldn’t be deleted. Check your connection and try again.')
+      setBusy(false)
+    }
+  }
 
   const browserNumbers = new Map()
   const visitsWithBrowsers = visits
@@ -254,12 +289,27 @@ function PageActivity({ code, user }) {
               /{code}
             </a>{' '}
             · published {formatDateTime(page.createdAt)}
+            {!page.published && <span className="unpublished-badge"> Unpublished</span>}
           </p>
         </div>
-        <button className="account-button" type="button" onClick={() => setRefreshCount((n) => n + 1)}>
-          Refresh
-        </button>
+        <div className="page-actions">
+          <button className="account-button" type="button" onClick={() => setRefreshCount((n) => n + 1)}>
+            Refresh
+          </button>
+          <button
+            className="account-button"
+            type="button"
+            disabled={busy}
+            onClick={() => setPublished(!page.published)}
+          >
+            {page.published ? 'Unpublish' : 'Publish again'}
+          </button>
+          <button className="account-button danger" type="button" disabled={busy} onClick={handleDelete}>
+            Delete page
+          </button>
+        </div>
       </div>
+      {actionError && <p className="form-error">{actionError}</p>}
 
       <dl className="activity-summary">
         <div>

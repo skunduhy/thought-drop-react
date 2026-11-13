@@ -8,7 +8,7 @@ Write a page for someone and share it. Every page looks like a sheet from a book
 - `/write` is the writing page. A title and signature are optional, and each line break starts a new paragraph.
 - To publish, the writer signs in with Google. **Only admin accounts can publish.** The page is saved in Cloud Firestore under a random seven-character code made from `A-Z` and `0-9`.
 - The shareable link is just that code, for example `https://your-site/7KQ2M9A`. Readers don't need to sign in, and the reader page works on phones.
-- `/admin` lists every published page with how many times it was opened and when it was last seen. `/admin/7KQ2M9A` shows the reader activity for one page. Both are admin-only.
+- `/admin` lists every page with how many times it was opened and when it was last seen. `/admin/7KQ2M9A` shows the reader activity for one page, and lets the admin unpublish it, publish it again, or delete it. Both are admin-only.
 
 Routing uses [React Router](https://reactrouter.com/) (`BrowserRouter` in `src/main.jsx`, routes in `src/App.jsx`).
 
@@ -45,7 +45,7 @@ Pages are stored in the Firestore collection `pages`, with the code as the docum
 | `authorUid` | Firebase Auth UID of the writer          |
 | `createdAt` | Server timestamp                         |
 
-The security rules in [`firestore.rules`](firestore.rules) allow anyone to read a single page by its code. Only admins can list pages. Only admins can create pages, they must create them as themselves, and published pages can't be edited or deleted.
+The security rules in [`firestore.rules`](firestore.rules) allow anyone to read a page by its code only while it's published (`published: true`); unpublished and unknown codes both show "page couldn't be found". Only admins can list pages, create them (as themselves), unpublish or republish them, and delete them along with their visits.
 
 ## Admins
 

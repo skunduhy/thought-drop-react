@@ -1,5 +1,6 @@
 import {
   collection,
+  deleteDoc,
   doc,
   getCountFromServer,
   getDoc,
@@ -9,6 +10,8 @@ import {
   query,
   runTransaction,
   serverTimestamp,
+  updateDoc,
+  writeBatch,
 } from 'firebase/firestore'
 import { db } from './firebase.js'
 
@@ -48,6 +51,7 @@ export async function publishPage({ title, message, sender }, user) {
         message,
         sender,
         authorUid: user.uid,
+        published: true,
         createdAt: serverTimestamp(),
       })
       return true
@@ -57,8 +61,15 @@ export async function publishPage({ title, message, sender }, user) {
   throw new Error('Could not find a free page code. Please try again.')
 }
 
+// Firestore denies reads of unpublished pages to non-admins, so a denied read is reported the same as a missing page.
 export async function fetchPage(code) {
-  const snapshot = await getDoc(doc(db, 'pages', code))
+  let snapshot
+  try {
+    snapshot = await getDoc(doc(db, 'pages', code))
+  } catch (error) {
+    if (error?.code === 'permission-denied') return null
+    throw error
+  }
   if (!snapshot.exists()) return null
 
   const data = snapshot.data()
@@ -68,8 +79,28 @@ export async function fetchPage(code) {
     message: data.message,
     sender: typeof data.sender === 'string' ? data.sender : '',
     authorUid: typeof data.authorUid === 'string' ? data.authorUid : '',
+    published: data.published === true,
     createdAt: data.createdAt?.toDate?.() ?? null,
   }
+}
+
+export function setPagePublished(code, published) {
+  return updateDoc(doc(db, 'pages', code), { published })
+}
+
+async function deleteAllDocs(collectionRef) {
+  for (;;) {
+    const snapshot = await getDocs(query(collectionRef, limit(500)))
+    if (snapshot.empty) return
+    const batch = writeBatch(db)
+    snapshot.docs.forEach((visitDoc) => batch.delete(visitDoc.ref))
+    await batch.commit()
+  }
+}
+
+export async function deletePage(code) {
+  await deleteAllDocs(collection(db, 'pages', code, 'visits'))
+  await deleteDoc(doc(db, 'pages', code))
 }
 
 export async function listPagesWithActivity() {
@@ -86,6 +117,7 @@ export async function listPagesWithActivity() {
         code: pageDoc.id,
         title: data.title || '',
         firstLine: (data.message || '').split('\n')[0].slice(0, 120),
+        published: data.published === true,
         createdAt: data.createdAt?.toDate?.() ?? null,
         visitCount: countSnapshot.data().count,
         lastSeenAt: latestSnapshot.docs[0]?.data().lastSeenAt?.toDate?.() ?? null,

@@ -1029,11 +1029,34 @@
 
 .live-badge,
 .finished-badge,
+.unpublished-badge,
 .browser-badge {
   padding: 2px 8px;
   border-radius: 999px;
   font-size: 11px;
   font-weight: 600;
+}
+
+.unpublished-badge {
+  background: #f3dcd6;
+  color: #8a3b2b;
+}
+
+.page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.account-button.danger {
+  border-color: #d9a79b;
+  color: #8a3b2b;
+}
+
+.account-button:disabled {
+  opacity: 0.6;
+  cursor: default;
 }
 
 .browser-badge {

@@ -152,7 +152,7 @@ function Reader({ code, user, authReady }) {
     let cancelled = false
     fetchPage(code)
       .then((page) => {
-        if (!cancelled) setResult({ code, status: page ? 'ready' : 'missing', page })
+        if (!cancelled) setResult({ code, status: page?.published ? 'ready' : 'missing', page })
       })
       .catch(() => {
         if (!cancelled) setResult({ code, status: 'error', page: null })
