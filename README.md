@@ -27,8 +27,11 @@ When someone opens a published page, the app records a **visit** in `pages/{code
 | `events`                    | Timeline: opened, reached the end, switched away, came back, closed (up to 60) |
 | `ended`                     | `true` once the page was closed                                             |
 | `device`, `browser`, `screen` | Mobile/tablet/desktop, browser name, screen size                          |
+| `visitorId`                  | Random anonymous ID from local storage, used to group visits in the same browser |
 
 While the page is visible, the visit is updated every 10 seconds, and again when the reader switches away or closes it. The update sent on close uses `fetch(..., { keepalive: true })` so it's still delivered while the tab is closing. A reader who is offline, or whose browser is killed, may lose up to the last 10 seconds. The author previewing their own page isn't counted.
+
+The browser ID is a random identifier for this site's browser profile, not a hardware ID or a verified identity. A different browser or private window, or cleared local storage, will appear as a different browser. Readers without available local storage are still tracked, but cannot be grouped across visits.
 
 The rules let anyone record a visit to an existing page, but only admins can read visits. Updates can only increase the counters, and `activeMs` can't exceed the real time since the visit started. The reader page includes a short notice that the sender can see when the page is read.
 

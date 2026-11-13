@@ -163,6 +163,9 @@ function VisitCard({ visit, number }) {
       <summary>
         <span className="visit-card-heading">
           <span className="visit-number">Visit {number}</span>
+          <span className={`browser-badge${visit.isRepeatBrowser ? ' browser-badge-repeat' : ''}`}>
+            Browser {visit.browserNumber}{visit.isRepeatBrowser ? ' · repeat' : ''}
+          </span>
           {live && <span className="live-badge">Reading now</span>}
           {visit.maxScroll >= FINISHED_SCROLL_PERCENT && <span className="finished-badge">Read to the end</span>}
         </span>
@@ -217,10 +220,25 @@ function PageActivity({ code, user }) {
   const [page, visits] = result.data
   if (!page) return <p className="ledger-status">There’s no page with the code {code}.</p>
 
-  const totalActive = visits.reduce((sum, visit) => sum + (visit.activeMs || 0), 0)
-  const longest = visits.reduce((max, visit) => Math.max(max, visit.activeMs || 0), 0)
-  const finishedCount = visits.filter((visit) => visit.maxScroll >= FINISHED_SCROLL_PERCENT).length
-  const firstOpened = visits.at(-1)?.startedAt
+  const browserNumbers = new Map()
+  const visitsWithBrowsers = visits
+    .slice()
+    .reverse()
+    .map((visit) => {
+      let browserNumber = browserNumbers.get(visit.visitorId)
+      const isRepeatBrowser = browserNumber !== undefined
+      if (!isRepeatBrowser) {
+        browserNumber = browserNumbers.size + 1
+        browserNumbers.set(visit.visitorId, browserNumber)
+      }
+      return { ...visit, browserNumber, isRepeatBrowser }
+    })
+    .reverse()
+
+  const totalActive = visitsWithBrowsers.reduce((sum, visit) => sum + (visit.activeMs || 0), 0)
+  const longest = visitsWithBrowsers.reduce((max, visit) => Math.max(max, visit.activeMs || 0), 0)
+  const finishedCount = visitsWithBrowsers.filter((visit) => visit.maxScroll >= FINISHED_SCROLL_PERCENT).length
+  const firstOpened = visitsWithBrowsers.at(-1)?.startedAt
   const lastSeen = visits.reduce(
     (latest, visit) => (visit.lastSeenAt && (!latest || visit.lastSeenAt > latest) ? visit.lastSeenAt : latest),
     null,
@@ -246,7 +264,11 @@ function PageActivity({ code, user }) {
       <dl className="activity-summary">
         <div>
           <dt>Times opened</dt>
-          <dd>{visits.length}</dd>
+          <dd>{visitsWithBrowsers.length}</dd>
+        </div>
+        <div>
+          <dt>Browsers identified</dt>
+          <dd>{browserNumbers.size}</dd>
         </div>
         <div>
           <dt>Total reading time</dt>
@@ -259,7 +281,7 @@ function PageActivity({ code, user }) {
         <div>
           <dt>Read to the end</dt>
           <dd>
-            {finishedCount} of {visits.length}
+            {finishedCount} of {visitsWithBrowsers.length}
           </dd>
         </div>
         <div>
@@ -272,12 +294,12 @@ function PageActivity({ code, user }) {
         </div>
       </dl>
 
-      {visits.length === 0 ? (
+      {visitsWithBrowsers.length === 0 ? (
         <p className="ledger-status">Nobody has opened this page yet.</p>
       ) : (
         <div className="visit-list">
-          {visits.map((visit, index) => (
-            <VisitCard key={visit.id} visit={visit} number={visits.length - index} />
+          {visitsWithBrowsers.map((visit, index) => (
+            <VisitCard key={visit.id} visit={visit} number={visitsWithBrowsers.length - index} />
           ))}
         </div>
       )}

@@ -11,6 +11,27 @@ const HEARTBEAT_MS = 10000
 const SCROLL_GESTURE_GAP_MS = 400
 const MAX_EVENTS = 60
 const FINISHED_SCROLL_PERCENT = 95
+const VISITOR_ID_STORAGE_KEY = 'thought-drop:visitor-id'
+const VISITOR_ID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/
+
+function getVisitorId() {
+  let storedId
+  try {
+    storedId = window.localStorage.getItem(VISITOR_ID_STORAGE_KEY)
+    if (storedId && VISITOR_ID_PATTERN.test(storedId)) return storedId
+  } catch (error) {
+    console.warn('Could not read the anonymous browser ID; this visit may appear as a new browser.', error)
+    return window.crypto.randomUUID()
+  }
+
+  const visitorId = window.crypto.randomUUID()
+  try {
+    window.localStorage.setItem(VISITOR_ID_STORAGE_KEY, visitorId)
+  } catch (error) {
+    console.warn('Could not save the anonymous browser ID; this visit may appear as a new browser.', error)
+  }
+  return visitorId
+}
 
 function describeDevice() {
   const ua = navigator.userAgent
@@ -72,6 +93,7 @@ function scrollPercent() {
 
 export function startVisitTracking(code) {
   const visitRef = doc(collection(db, 'pages', code, 'visits'))
+  const visitorId = getVisitorId()
   const openedAt = performance.now()
   const state = {
     activeMs: 0,
@@ -177,6 +199,7 @@ export function startVisitTracking(code) {
       events: [{ type: 'open', t: 0 }],
       ended: false,
       ...describeDevice(),
+      visitorId,
     })
       .then(() => {
         created = true

@@ -8,7 +8,7 @@ service cloud.firestore {
       return request.auth != null
         && request.auth.token.email_verified == true
         && request.auth.token.email.lower() in [
-          'sample@example.com'
+          'skforoffice99@gmail.com'
         ];
     }
 
@@ -47,8 +47,13 @@ service cloud.firestore {
         allow create: if exists(/databases/$(database)/documents/pages/$(code))
           && request.resource.data.keys().hasOnly([
             'startedAt', 'lastSeenAt', 'activeMs', 'maxScroll', 'scrolls', 'taps',
-            'hiddenCount', 'events', 'ended', 'device', 'browser', 'screen'
+            'hiddenCount', 'events', 'ended', 'device', 'browser', 'screen', 'visitorId'
           ])
+          && request.resource.data.keys().hasAll(['visitorId'])
+          && request.resource.data.visitorId is string
+          && request.resource.data.visitorId.matches(
+            '^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+          )
           && request.resource.data.startedAt == request.time
           && request.resource.data.lastSeenAt == request.time
           && request.resource.data.activeMs == 0
