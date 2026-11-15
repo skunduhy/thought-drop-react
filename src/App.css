@@ -36,6 +36,7 @@
 .desk.reader-desk {
   --reader-gutter: 28px;
   min-height: 100dvh;
+  justify-content: center;
   padding-top: var(--reader-gutter);
   padding-bottom: var(--reader-gutter);
 }
@@ -168,8 +169,9 @@ body:has(.reader-desk) {
 }
 
 .reader .reader-sheet {
-  width: min(660px, 100%, calc((100dvh - 2 * var(--reader-gutter)) * 3 / 4));
-  height: min(880px, calc(100dvh - 2 * var(--reader-gutter)));
+  --reader-page-height: min(880px, calc(100dvh - 2 * var(--reader-gutter)), calc(100cqw * 7 / 4));
+  width: min(100%, calc(var(--reader-page-height) * 3 / 4));
+  height: var(--reader-page-height);
   min-height: 0;
 }
 
@@ -284,6 +286,7 @@ body:has(.reader-desk) {
 
 .reader {
   position: relative;
+  container-type: inline-size;
 }
 
 .measuring-sheet {
