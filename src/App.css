@@ -39,6 +39,19 @@
   justify-content: center;
   padding-top: var(--reader-gutter);
   padding-bottom: var(--reader-gutter);
+  background:
+    radial-gradient(ellipse at 50% 0%, rgba(255, 250, 240, 0.8), transparent 65%),
+    radial-gradient(circle 22px at 14% 57%, rgba(176, 132, 99, 0.18) 97%, transparent),
+    radial-gradient(circle 7px at 18% 62%, rgba(154, 106, 75, 0.22) 94%, transparent),
+    radial-gradient(circle 34px at 88% 53%, transparent 92%, rgba(154, 106, 75, 0.16) 94%, rgba(154, 106, 75, 0.16) 97%, transparent),
+    radial-gradient(circle 9px at 84% 61%, rgba(176, 132, 99, 0.2) 94%, transparent),
+    radial-gradient(ellipse 28% 48% at 100% 12%, transparent 62%, rgba(154, 106, 75, 0.13) 62.3%, rgba(154, 106, 75, 0.13) 62.8%, transparent 63.1%, transparent 74%, rgba(154, 106, 75, 0.1) 74.3%, rgba(154, 106, 75, 0.1) 74.8%, transparent 75.1%, transparent 86%, rgba(154, 106, 75, 0.07) 86.3%, rgba(154, 106, 75, 0.07) 86.8%, transparent 87.1%),
+    radial-gradient(ellipse 29% 35% at -5% 100%, transparent 68%, rgba(154, 106, 75, 0.12) 68.3%, rgba(154, 106, 75, 0.12) 68.8%, transparent 69.1%, transparent 80%, rgba(154, 106, 75, 0.09) 80.3%, rgba(154, 106, 75, 0.09) 80.8%, transparent 81.1%),
+    radial-gradient(ellipse 18% 28% at 0% 0%, rgba(194, 178, 155, 0.2) 70%, transparent 70.3%),
+    radial-gradient(ellipse 30% 52% at -8% 24%, rgba(176, 132, 99, 0.13) 70%, transparent 70.3%),
+    radial-gradient(ellipse 26% 36% at 102% 100%, rgba(194, 178, 155, 0.28) 72%, transparent 72.3%),
+    radial-gradient(ellipse 32% 24% at 8% 108%, rgba(154, 106, 75, 0.09) 70%, transparent 70.3%),
+    #e8dfcf;
 }
 
 body:has(.reader-desk) {
