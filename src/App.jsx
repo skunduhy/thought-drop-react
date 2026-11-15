@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link, useLocation } from 'react-router'
 import { onAuthStateChanged, signInWithPopup, signOut } from 'firebase/auth'
 import { auth, googleProvider, isFirebaseConfigured } from './firebase.js'
-import ARouter from './aRouter.jsx'
+import { Router } from './Router.jsx'
 import './App.css'
 
 function Masthead({ user, authReady, onSignIn }) {
@@ -63,7 +63,7 @@ function App() {
   return (
     <main className="desk">
       <Masthead {...authProps} />
-      <ARouter {...authProps} />
+      <Router {...authProps} />
       <footer className="desk-footer">Made for the words you almost didn’t send.</footer>
     </main>
   )

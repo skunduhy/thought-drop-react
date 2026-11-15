@@ -20,7 +20,7 @@ function AdminRoute(props) {
   return <AdminView code={code} {...props} />
 }
 
-export default function ARouter({ user, authReady, onSignIn }) {
+export function Router({ user, authReady, onSignIn }) {
   const authProps = { user, authReady, onSignIn }
 
   return (
