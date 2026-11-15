@@ -17,6 +17,14 @@ const EVENT_LABELS = {
   visible: 'Came back',
   finished: 'Reached the end',
   closed: 'Closed the page',
+  page: 'Turned to page',
+}
+
+function hasReadToEnd(visit) {
+  if (visit.events.some((event) => event.type === 'page')) {
+    return visit.events.some((event) => event.type === 'finished')
+  }
+  return visit.maxScroll >= FINISHED_SCROLL_PERCENT
 }
 
 function formatDuration(ms) {
@@ -156,7 +164,10 @@ function VisitTimeline({ visit }) {
       {visit.events.map((event, index) => (
         <li key={index}>
           <span className="visit-timeline-time">{formatOffset(event.t)}</span>
-          <span>{EVENT_LABELS[event.type] || event.type}</span>
+          <span>
+            {EVENT_LABELS[event.type] || event.type}
+            {event.type === 'page' && ` ${event.page} of ${event.pages}`}
+          </span>
         </li>
       ))}
     </ol>
@@ -174,7 +185,7 @@ function VisitCard({ visit, number }) {
             Browser {visit.browserNumber}{visit.isRepeatBrowser ? ' · repeat' : ''}
           </span>
           {live && <span className="live-badge">Reading now</span>}
-          {visit.maxScroll >= FINISHED_SCROLL_PERCENT && <span className="finished-badge">Read to the end</span>}
+          {hasReadToEnd(visit) && <span className="finished-badge">Read to the end</span>}
         </span>
         <span className="visit-card-when">
           {formatDateTime(visit.startedAt)} → {visit.ended ? 'closed' : live ? 'still open' : 'last seen'}{' '}
@@ -187,7 +198,7 @@ function VisitCard({ visit, number }) {
           <dd>{formatDuration(visit.activeMs)}</dd>
         </div>
         <div>
-          <dt>Scrolled</dt>
+          <dt>Reading progress</dt>
           <dd>{visit.maxScroll}%</dd>
         </div>
         <div>
@@ -272,7 +283,7 @@ function PageActivity({ code, user }) {
 
   const totalActive = visitsWithBrowsers.reduce((sum, visit) => sum + (visit.activeMs || 0), 0)
   const longest = visitsWithBrowsers.reduce((max, visit) => Math.max(max, visit.activeMs || 0), 0)
-  const finishedCount = visitsWithBrowsers.filter((visit) => visit.maxScroll >= FINISHED_SCROLL_PERCENT).length
+  const finishedCount = visitsWithBrowsers.filter(hasReadToEnd).length
   const firstOpened = visitsWithBrowsers.at(-1)?.startedAt
   const lastSeen = visits.reduce(
     (latest, visit) => (visit.lastSeenAt && (!latest || visit.lastSeenAt > latest) ? visit.lastSeenAt : latest),

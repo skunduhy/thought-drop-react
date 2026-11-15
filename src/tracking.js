@@ -6,6 +6,7 @@ import {
   firebaseProjectId,
   usingEmulators,
 } from './firebase.js'
+import { PAGE_CHANGE_EVENT } from './pagination.js'
 
 const HEARTBEAT_MS = 10000
 const SCROLL_GESTURE_GAP_MS = 400
@@ -91,13 +92,28 @@ function scrollPercent() {
   return Math.min(100, Math.round(((window.scrollY + window.innerHeight) / scrollable) * 100))
 }
 
+function readingProgress() {
+  const reader = document.querySelector('.reader[data-page-count]')
+  if (!reader) return { percent: scrollPercent(), atEnd: true }
+  const count = Number(reader.dataset.pageCount)
+  const index = Number(reader.dataset.pageIndex)
+  const content = reader.querySelector('.reader-sheet:not(.measuring-sheet) .book-content')
+  if (!count || !content) return { percent: 0, atEnd: false }
+  const bounds = content.getBoundingClientRect()
+  const fraction = Math.min(1, Math.max(0, (window.innerHeight - bounds.top) / bounds.height))
+  return {
+    percent: Math.floor(((index + fraction) / count) * 100),
+    atEnd: index === count - 1 && fraction >= FINISHED_SCROLL_PERCENT / 100,
+  }
+}
+
 export function startVisitTracking(code) {
   const visitRef = doc(collection(db, 'pages', code, 'visits'))
   const visitorId = getVisitorId()
   const openedAt = performance.now()
   const state = {
     activeMs: 0,
-    maxScroll: scrollPercent(),
+    maxScroll: readingProgress().percent,
     scrolls: 0,
     taps: 0,
     hiddenCount: 0,
@@ -108,10 +124,12 @@ export function startVisitTracking(code) {
   let created = false
   let finished = false
   let lastScrollAt = 0
+  let lastBookPage = ''
   let dirty = false
 
-  function addEvent(type) {
-    if (state.events.length < MAX_EVENTS) state.events.push({ type, t: Math.round(performance.now() - openedAt) })
+  function addEvent(type, details = {}) {
+    if (type === 'finished' && state.events.length === MAX_EVENTS) state.events.pop()
+    if (state.events.length < MAX_EVENTS) state.events.push({ type, t: Math.round(performance.now() - openedAt), ...details })
     dirty = true
   }
 
@@ -127,7 +145,7 @@ export function startVisitTracking(code) {
   }
 
   function checkFinished() {
-    if (!finished && state.maxScroll >= FINISHED_SCROLL_PERCENT) {
+    if (!finished && state.maxScroll >= FINISHED_SCROLL_PERCENT && readingProgress().atEnd) {
       finished = true
       addEvent('finished')
     }
@@ -137,10 +155,33 @@ export function startVisitTracking(code) {
     const now = performance.now()
     if (now - lastScrollAt > SCROLL_GESTURE_GAP_MS) state.scrolls += 1
     lastScrollAt = now
-    const percent = scrollPercent()
+    updateProgress()
+    dirty = true
+  }
+
+  function updateProgress() {
+    const percent = readingProgress().percent
     if (percent > state.maxScroll) state.maxScroll = percent
     checkFinished()
     dirty = true
+  }
+
+  function handlePageChange(event) {
+    if (event.detail?.code !== code) return
+    recordBookPage()
+    updateProgress()
+    flush(true)
+  }
+
+  function recordBookPage() {
+    const reader = document.querySelector('.reader[data-page-count]')
+    const count = Number(reader?.dataset.pageCount)
+    const index = Number(reader?.dataset.pageIndex)
+    const key = `${index}/${count}`
+    if (count > 0 && key !== lastBookPage) {
+      lastBookPage = key
+      addEvent('page', { page: index + 1, pages: count })
+    }
   }
 
   function handleTap() {
@@ -185,6 +226,7 @@ export function startVisitTracking(code) {
     flush(true)
   }
 
+  recordBookPage()
   checkFinished()
   // Deferring the create lets an immediate unmount (e.g. React StrictMode's double mount) cancel it.
   const createTimer = window.setTimeout(() => {
@@ -213,6 +255,7 @@ export function startVisitTracking(code) {
   }, HEARTBEAT_MS)
 
   window.addEventListener('scroll', handleScroll, { passive: true })
+  window.addEventListener(PAGE_CHANGE_EVENT, handlePageChange)
   window.addEventListener('pointerdown', handleTap, { passive: true })
   document.addEventListener('visibilitychange', handleVisibility)
   window.addEventListener('pagehide', handlePageHide)
@@ -222,6 +265,7 @@ export function startVisitTracking(code) {
     window.clearTimeout(createTimer)
     window.clearInterval(heartbeat)
     window.removeEventListener('scroll', handleScroll)
+    window.removeEventListener(PAGE_CHANGE_EVENT, handlePageChange)
     window.removeEventListener('pointerdown', handleTap)
     document.removeEventListener('visibilitychange', handleVisibility)
     window.removeEventListener('pagehide', handlePageHide)

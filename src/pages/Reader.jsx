@@ -1,40 +1,17 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router'
 import { BookPage, WriteLink } from '../components/BookPage.jsx'
+import { PaginatedBook } from '../components/PaginatedBook.jsx'
 import { fetchPage, PAGE_CODE_PATTERN, SAMPLE_CODE } from '../pages.js'
 import { startVisitTracking } from '../tracking.js'
 import { isFirebaseConfigured } from '../firebase.js'
 import { SETUP_MESSAGE } from '../constants.js'
 import SAMPLE_PAGE from '../data/samplePage.json'
 
-function toParagraphs(text) {
-  return text
-    .replace(/\r\n?/g, '\n')
-    .split(/\n+/)
-    .map((paragraph) => paragraph.trim())
-    .filter(Boolean)
-}
-
 function ReadingPage({ code, page, isSample }) {
   return (
-    <section className="reader">
-      <BookPage code={code} heading="A page for you">
-        {page.title ? (
-          <h1 className="page-title">{page.title}</h1>
-        ) : (
-          <h1 className="visually-hidden">A page for you</h1>
-        )}
-        <div className="fleuron" aria-hidden="true">❦</div>
-        <div className="page-text">
-          {page.greeting?.trim() && <p className="page-greeting">{page.greeting.trim()}</p>}
-          <div className="page-message">
-            {toParagraphs(page.message).map((paragraph, index) => (
-              <p className={index === 0 ? 'page-opening' : undefined} key={index}>{paragraph}</p>
-            ))}
-          </div>
-        </div>
-        <p className="page-signature">— {page.sender || 'someone who thought of you'}</p>
-      </BookPage>
+    <section className="reader" data-page-count="0" data-page-index="0">
+      <PaginatedBook code={code} page={page} />
       {!isSample && <p className="reading-notice">The sender can see when this page is opened and how long it’s read.</p>}
       <WriteLink />
     </section>

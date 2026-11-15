@@ -11,6 +11,7 @@ import {
 import { BookPage } from '../components/BookPage.jsx'
 import { ArrowIcon, CopyIcon, GoogleIcon } from '../components/Icons.jsx'
 import { SETUP_MESSAGE } from '../constants.js'
+import { messageBlocks, PAGE_BREAK_MARKER } from '../pagination.js'
 
 function describeAuthError(error) {
   switch (error?.code) {
@@ -36,6 +37,7 @@ export function ComposerPage({ user, authReady, onSignIn }) {
   const [feedback, setFeedback] = useState('')
   const [error, setError] = useState('')
   const messageRef = useRef(null)
+  const cursorRef = useRef(null)
 
   const shareUrl = publishedCode ? `${window.location.origin}/${publishedCode}` : ''
   const canNativeShare = typeof navigator.share === 'function'
@@ -50,6 +52,11 @@ export function ComposerPage({ user, authReady, onSignIn }) {
     if (!textarea) return
     textarea.style.height = 'auto'
     textarea.style.height = `${textarea.scrollHeight}px`
+    if (cursorRef.current !== null) {
+      textarea.focus()
+      textarea.setSelectionRange(cursorRef.current, cursorRef.current)
+      cursorRef.current = null
+    }
   }, [message])
 
   function editDraft(setter) {
@@ -59,12 +66,29 @@ export function ComposerPage({ user, authReady, onSignIn }) {
     }
   }
 
+  function insertPageBreak() {
+    const textarea = messageRef.current
+    const start = textarea.selectionStart
+    const end = textarea.selectionEnd
+    const before = message.slice(0, start)
+    const after = message.slice(end)
+    const insertion = `${before && !before.endsWith('\n') ? '\n' : ''}${PAGE_BREAK_MARKER}\n`
+    const next = before + insertion + after
+    if (next.length > MAX_MESSAGE_LENGTH) {
+      setError('There isn’t enough space for a page break. Shorten your message and try again.')
+      return
+    }
+    cursorRef.current = before.length + insertion.length
+    setMessage(next)
+    setError('')
+  }
+
   async function handlePublish(event) {
     event.preventDefault()
     if (publishing || isPublished) return
 
     const cleanMessage = message.trim()
-    if (!cleanMessage) {
+    if (!messageBlocks(cleanMessage).some((block) => block.type === 'paragraph')) {
       setError('Write a few words on the page before publishing it.')
       messageRef.current?.focus()
       return
@@ -167,6 +191,12 @@ export function ComposerPage({ user, authReady, onSignIn }) {
           />
         </div>
         <label className="visually-hidden" htmlFor="page-message">Your message</label>
+        {!isPublished && (
+          <div className="message-toolbar">
+            <button className="account-button" type="button" onClick={insertPageBreak}>Insert page break</button>
+            <span>A new page starts at each [page break] line.</span>
+          </div>
+        )}
         <textarea
           id="page-message"
           ref={messageRef}

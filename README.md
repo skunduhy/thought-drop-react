@@ -6,6 +6,7 @@ Write a page for someone and share it. Every page looks like a sheet from a book
 
 - `/` is a book-cover landing page with two choices: **Write a page** or **Read a sample page** (`/SAMPLE1`, rendered from `src/data/samplePage.json` without a Firebase request). The sample has a title, greeting, and 400-word Lorem Ipsum message, using the same book layout as published pages without a sample badge. Sample visits aren't tracked.
 - `/write` is the writing page. A title, opening greeting, and signature are optional, and each line break in the message starts a new paragraph. The greeting appears as a normal salutation, followed by the message with a decorative initial.
+- **Insert page break** adds a `[page break]` line at the cursor. Readers see one fixed-height book page at a time (880px on desktop, 720px on phones), with **Previous / Next** controls. Overflow continues automatically onto another page; a page-break line starts the following content on a new page. Break markers count toward the 5,000-character limit and aren't shown to readers. Consecutive breaks don't create empty pages.
 - To publish, the writer signs in with Google. **Only admin accounts can publish.** The page is saved in Cloud Firestore under a random seven-character code made from `A-Z` and `0-9`.
 - The shareable link is just that code, for example `https://your-site/7KQ2M9A`. Readers don't need to sign in, and the reader page works on phones.
 - `/admin` lists every page with how many times it was opened and when it was last seen. `/admin/7KQ2M9A` shows the reader activity for one page, and lets the admin unpublish it, publish it again, or delete it. Both are admin-only.
@@ -21,15 +22,17 @@ When someone opens a published page, the app records a **visit** in `pages/{code
 | `startedAt`                 | When the page was opened (server time)                                      |
 | `lastSeenAt`                | Last update from the reader; once `ended` is true, this is when they closed it |
 | `activeMs`                  | Time the page was actually visible (time on another tab or app isn't counted) |
-| `maxScroll`                 | How far down they scrolled, 0–100%                                          |
+| `maxScroll`                 | Furthest reading progress across all book pages, 0–100%                    |
 | `scrolls`, `taps`           | Number of scroll gestures and taps/clicks                                   |
 | `hiddenCount`               | How many times they switched away                                           |
-| `events`                    | Timeline: opened, reached the end, switched away, came back, closed (up to 60) |
+| `events`                    | Timeline: opened, turned to a numbered page, reached the end, switched away, came back, closed (up to 60) |
 | `ended`                     | `true` once the page was closed                                             |
 | `device`, `browser`, `screen` | Mobile/tablet/desktop, browser name, screen size                          |
 | `visitorId`                  | Random anonymous ID from local storage, used to group visits in the same browser |
 
 While the page is visible, the visit is updated every 10 seconds, and again when the reader switches away or closes it. The update sent on close uses `fetch(..., { keepalive: true })` so it's still delivered while the tab is closing. A reader who is offline, or whose browser is killed, may lose up to the last 10 seconds. The author previewing their own page isn't counted.
+
+Turning a book page also updates reading progress immediately and records the page number in the activity timeline. Scrolling on the first page doesn't count as finishing the whole message: the "reached the end" event requires opening the final page and bringing its content area into view. Going back never reduces the furthest progress already recorded. The admin's completion badges use this event for paginated visits; older visits retain their previous scroll-based completion status.
 
 The browser ID is a random identifier for this site's browser profile, not a hardware ID or a verified identity. A different browser or private window, or cleared local storage, will appear as a different browser. Readers without available local storage are still tracked, but cannot be grouped across visits.
 
