@@ -16,10 +16,10 @@ function ReadingPage({ code, page }) {
   )
 }
 
-function NoticePage({ code, heading, title, children }) {
+function NoticePage({ heading, title, children }) {
   return (
     <section className="reader">
-      <BookPage code={code} heading={heading}>
+      <BookPage heading={heading}>
         <h1 className="page-title">{title}</h1>
         <div className="fleuron" aria-hidden="true">❦</div>
         <div className="page-text page-text-plain">{children}</div>
@@ -69,7 +69,7 @@ function Reader({ code, user, authReady }) {
   if (status === 'loading') {
     return (
       <section className="reader" aria-busy="true">
-        <BookPage code={code} heading="A thought for you">
+        <BookPage heading="A thought for you">
           <p className="loading-text" role="status">Turning to your page…</p>
           <div className="loading-lines" aria-hidden="true">
             <span />
@@ -84,7 +84,7 @@ function Reader({ code, user, authReady }) {
 
   if (status === 'missing') {
     return (
-      <NoticePage code={code} heading="A missing page" title="This page couldn’t be found.">
+      <NoticePage heading="A missing page" title="This page couldn’t be found.">
         <p>Check that the link was copied in full, or ask the person who sent it to share it again.</p>
       </NoticePage>
     )
@@ -92,7 +92,7 @@ function Reader({ code, user, authReady }) {
 
   if (status === 'error') {
     return (
-      <NoticePage code={code} heading="A thought for you" title="This page couldn’t be opened.">
+      <NoticePage heading="A thought for you" title="This page couldn’t be opened.">
         <p>{isFirebaseConfigured
           ? 'Something went wrong while fetching it. Check your connection and refresh the page.'
           : SETUP_MESSAGE}</p>

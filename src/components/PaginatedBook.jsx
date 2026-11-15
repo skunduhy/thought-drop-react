@@ -10,12 +10,15 @@ function ContentBlock({ block }) {
   return <p className={className}>{block.text}</p>
 }
 
-function Sheet({ code, index, total, measuring, contentRef, children }) {
+function Sheet({ index, total, measuring, contentRef, navigation, children }) {
   return (
     <article className={`book-page reader-sheet${measuring ? ' measuring-sheet' : ''}`} aria-hidden={measuring || undefined}>
       <p className="running-head"><span>Thought Drop</span><span>A thought for you</span></p>
       <div className="book-content page-text" ref={contentRef}>{children}</div>
-      <p className="folio">— {code} · {index + 1} / {total} —</p>
+      <p className="folio" role={measuring ? undefined : 'status'} aria-live={measuring ? undefined : 'polite'}>
+        Page {index + 1} / {total}
+      </p>
+      {navigation}
     </article>
   )
 }
@@ -78,19 +81,27 @@ export function PaginatedBook({ code, page }) {
   return (
     <>
       {!page.title && <h1 className="visually-hidden">A page for you</h1>}
-      <Sheet code={code} index={0} total={1} measuring contentRef={measureRef} />
+      <Sheet index={0} total={1} measuring contentRef={measureRef} />
       {error ? <p className="form-error" role="alert">{error}</p> : (
         <>
-          <Sheet code={code} index={activeIndex} total={pages.length || 1}>
+          <Sheet
+            index={activeIndex}
+            total={pages.length || 1}
+            navigation={
+              <nav className="page-navigation" aria-label="Book pages">
+                <button type="button" className="page-turn-button" aria-label="Previous page" disabled={activeIndex === 0} onClick={() => turnPage(activeIndex - 1)}>
+                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="m12 5-5 5 5 5" /></svg>
+                </button>
+                <button type="button" className="page-turn-button" aria-label="Next page" disabled={activeIndex >= pages.length - 1} onClick={() => turnPage(activeIndex + 1)}>
+                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="m8 5 5 5-5 5" /></svg>
+                </button>
+              </nav>
+            }
+          >
             <div ref={visibleRef} tabIndex={-1} aria-label={`Page ${activeIndex + 1}`}>
               {(pages[activeIndex] || []).map((block, blockIndex) => <ContentBlock key={blockIndex} block={block} />)}
             </div>
           </Sheet>
-          <nav className="page-navigation" aria-label="Book pages">
-            <button type="button" className="secondary-button" disabled={activeIndex === 0} onClick={() => turnPage(activeIndex - 1)}>Previous</button>
-            <span role="status" aria-live="polite">Page {activeIndex + 1} of {pages.length || 1}</span>
-            <button type="button" className="secondary-button" disabled={activeIndex >= pages.length - 1} onClick={() => turnPage(activeIndex + 1)}>Next</button>
-          </nav>
         </>
       )}
     </>
