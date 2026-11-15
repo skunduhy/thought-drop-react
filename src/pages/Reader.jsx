@@ -69,7 +69,7 @@ function Reader({ code, user, authReady }) {
   if (status === 'loading') {
     return (
       <section className="reader" aria-busy="true">
-        <BookPage heading="A thought for you">
+        <BookPage heading="A thought for you" className="reader-sheet">
           <p className="loading-text" role="status">Turning to your page…</p>
           <div className="loading-lines" aria-hidden="true">
             <span />
