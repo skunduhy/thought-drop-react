@@ -4,7 +4,7 @@ Write a page for someone and share it. Every page looks like a sheet from a book
 
 ## How it works
 
-- `/` is a book-cover landing page with two choices: **Write a page** or **Read a sample page** (`/SAMPLE1`, built into the app).
+- `/` is a book-cover landing page with two choices: **Write a page** or **Read a sample page** (`/SAMPLE1`, rendered from `src/data/samplePage.json` without a Firebase request). The sample has a title, greeting, and 400-word Lorem Ipsum message, using the same book layout as published pages without a sample badge. Sample visits aren't tracked.
 - `/write` is the writing page. A title, opening greeting, and signature are optional, and each line break in the message starts a new paragraph. The greeting appears as a normal salutation, followed by the message with a decorative initial.
 - To publish, the writer signs in with Google. **Only admin accounts can publish.** The page is saved in Cloud Firestore under a random seven-character code made from `A-Z` and `0-9`.
 - The shareable link is just that code, for example `https://your-site/7KQ2M9A`. Readers don't need to sign in, and the reader page works on phones.

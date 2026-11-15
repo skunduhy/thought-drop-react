@@ -5,17 +5,7 @@ import { fetchPage, PAGE_CODE_PATTERN, SAMPLE_CODE } from '../pages.js'
 import { startVisitTracking } from '../tracking.js'
 import { isFirebaseConfigured } from '../firebase.js'
 import { SETUP_MESSAGE } from '../constants.js'
-
-const SAMPLE_PAGE = {
-  title: 'For the friend who stayed',
-  message: [
-    'I have been meaning to write this for a long time, and somehow the right moment never came. So I am deciding that this ordinary afternoon is the right moment.',
-    'Do you remember the winter everything fell apart? I hardly said a word for weeks. You never asked me to explain. You just kept turning up with terrible coffee and good books, and sat with me until the quiet felt less heavy.',
-    'I don’t think I ever thanked you properly. Some kindnesses are so gentle that you only see how big they were much later, when you look back and realise they held the whole thing together.',
-    'So here it is, on a page you can keep: thank you. For staying, for the coffee, and for every book with your notes in the margins.',
-  ].join('\n'),
-  sender: 'Meera',
-}
+import SAMPLE_PAGE from '../data/samplePage.json'
 
 function toParagraphs(text) {
   return text
@@ -28,7 +18,6 @@ function toParagraphs(text) {
 function ReadingPage({ code, page, isSample }) {
   return (
     <section className="reader">
-      {isSample && <p className="sample-badge">A sample page — this is what your reader will see</p>}
       <BookPage code={code} heading="A page for you">
         {page.title ? (
           <h1 className="page-title">{page.title}</h1>

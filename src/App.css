@@ -556,16 +556,6 @@
   margin: 0;
 }
 
-.sample-badge {
-  margin: 0 0 18px;
-  padding: 6px 14px;
-  border: 1px dashed #c8b393;
-  border-radius: 999px;
-  color: #7a5a43;
-  font-size: 12px;
-  letter-spacing: 0.04em;
-}
-
 .text-button {
   margin-top: 30px;
   padding: 8px;
