@@ -34,8 +34,14 @@
 }
 
 .desk.reader-desk {
-  padding-top: 28px;
-  padding-bottom: 28px;
+  --reader-gutter: 28px;
+  min-height: 100dvh;
+  padding-top: var(--reader-gutter);
+  padding-bottom: var(--reader-gutter);
+}
+
+body:has(.reader-desk) {
+  min-height: 100dvh;
 }
 
 .composer,
@@ -161,9 +167,10 @@
   margin-bottom: 0.7em;
 }
 
-.reader-sheet {
-  height: 880px;
-  min-height: 880px;
+.reader .reader-sheet {
+  width: min(660px, 100%, calc((100dvh - 2 * var(--reader-gutter)) * 3 / 4));
+  height: min(880px, calc(100dvh - 2 * var(--reader-gutter)));
+  min-height: 0;
 }
 
 .reader-sheet .running-head,
@@ -819,11 +826,6 @@
     padding: 40px 28px 36px 38px;
   }
 
-  .reader-sheet {
-    height: 720px;
-    min-height: 720px;
-  }
-
   .page-navigation {
     bottom: 10px;
     left: 16px;
@@ -907,6 +909,39 @@
     padding: 36px 0 22px;
     font-size: 14px;
     text-align: center;
+  }
+}
+
+@media (max-width: 1024px), (max-height: 600px) {
+  .desk.reader-desk {
+    --reader-gutter: 12px;
+  }
+}
+
+@media (max-height: 600px) {
+  .reader .reader-sheet {
+    padding: 16px 20px 22px 28px;
+  }
+
+  .reader-sheet .running-head {
+    margin-bottom: 12px;
+    font-size: 12px;
+  }
+
+  .reader-sheet .page-title {
+    font-size: 28px;
+  }
+
+  .reader-sheet .fleuron {
+    margin: 8px 0 12px;
+  }
+
+  .reader-sheet .folio {
+    margin-top: 16px;
+  }
+
+  .reader-sheet .page-navigation {
+    bottom: 10px;
   }
 }
 
