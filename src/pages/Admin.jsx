@@ -6,7 +6,7 @@ import {
   fetchVisits,
   listPagesWithActivity,
   setPagePublished,
-} from './pages.js'
+} from '../pages.js'
 
 const LIVE_WINDOW_MS = 25000
 const FINISHED_SCROLL_PERCENT = 95

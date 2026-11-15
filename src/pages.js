@@ -16,6 +16,7 @@ import {
 import { db } from './firebase.js'
 
 export const MAX_MESSAGE_LENGTH = 5000
+export const MAX_GREETING_LENGTH = 100
 export const MAX_TITLE_LENGTH = 80
 export const MAX_SENDER_LENGTH = 40
 export const SAMPLE_CODE = 'SAMPLE1'
@@ -39,7 +40,7 @@ export function createPageCode() {
   return code
 }
 
-export async function publishPage({ title, message, sender }, user) {
+export async function publishPage({ title, greeting, message, sender }, user) {
   for (let attempt = 0; attempt < MAX_PUBLISH_ATTEMPTS; attempt += 1) {
     const code = createPageCode()
     const pageRef = doc(db, 'pages', code)
@@ -48,6 +49,7 @@ export async function publishPage({ title, message, sender }, user) {
       if (existing.exists()) return false
       transaction.set(pageRef, {
         title,
+        greeting,
         message,
         sender,
         authorUid: user.uid,
@@ -76,6 +78,7 @@ export async function fetchPage(code) {
   if (typeof data.message !== 'string' || !data.message.trim()) return null
   return {
     title: typeof data.title === 'string' ? data.title : '',
+    greeting: typeof data.greeting === 'string' ? data.greeting : '',
     message: data.message,
     sender: typeof data.sender === 'string' ? data.sender : '',
     authorUid: typeof data.authorUid === 'string' ? data.authorUid : '',

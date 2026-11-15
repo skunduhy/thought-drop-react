@@ -122,6 +122,35 @@
   text-align: center;
 }
 
+.greeting-field {
+  margin-bottom: 12px;
+  color: #8c7b69;
+  font-size: 12px;
+}
+
+.greeting-field label span {
+  color: #ad9c86;
+  font-style: italic;
+}
+
+.page-greeting-input {
+  display: block;
+  width: 100%;
+  margin-top: 5px;
+  padding: 5px 0;
+  border: 0;
+  border-bottom: 1px solid #ece2d1;
+  background: transparent;
+  color: #3d3027;
+  font-family: var(--font-book);
+  font-size: 19px;
+}
+
+.page-greeting-input::placeholder {
+  color: #c2b29b;
+  font-style: italic;
+}
+
 .page-text {
   flex: 1;
   color: #3d3027;
@@ -166,6 +195,7 @@
 }
 
 .page-title-input:focus-visible,
+.page-greeting-input:focus-visible,
 .page-textarea:focus-visible,
 .signature-field input:focus-visible {
   outline: 1px dashed #cdb89a;
@@ -716,6 +746,10 @@
 
   .page-title {
     font-size: 28px;
+  }
+
+  .page-greeting-input {
+    font-size: 18px;
   }
 
   .fleuron {

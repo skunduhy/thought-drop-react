@@ -25,12 +25,14 @@ service cloud.firestore {
       allow create: if isAdmin()
         && code.matches('^[A-Z0-9]{7}$')
         && code != 'SAMPLE1'
-        && request.resource.data.keys().hasOnly(['title', 'message', 'sender', 'authorUid', 'published', 'createdAt'])
+        && request.resource.data.keys().hasOnly(['title', 'greeting', 'message', 'sender', 'authorUid', 'published', 'createdAt'])
         && request.resource.data.published == true
         && request.resource.data.authorUid == request.auth.uid
         && request.resource.data.message is string
         && request.resource.data.message.size() > 0
         && request.resource.data.message.size() <= 5000
+        && request.resource.data.greeting is string
+        && request.resource.data.greeting.size() <= 100
         && request.resource.data.title is string
         && request.resource.data.title.size() <= 80
         && request.resource.data.sender is string
