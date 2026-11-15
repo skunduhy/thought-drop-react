@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router'
 import { BookPage } from '../components/BookPage.jsx'
 import { PaginatedBook } from '../components/PaginatedBook.jsx'
+import { ReaderLoader } from '../components/ReaderLoader.jsx'
 import { fetchPage, PAGE_CODE_PATTERN, SAMPLE_CODE } from '../pages.js'
 import { startVisitTracking } from '../tracking.js'
 import { isFirebaseConfigured } from '../firebase.js'
@@ -66,21 +67,7 @@ function Reader({ code, user, authReady }) {
   let status = result.code === code ? result.status : 'loading'
   if (!isFirebaseConfigured) status = 'error'
 
-  if (status === 'loading') {
-    return (
-      <section className="reader" aria-busy="true">
-        <BookPage heading="A thought for you" className="reader-sheet">
-          <p className="loading-text" role="status">Turning to your page…</p>
-          <div className="loading-lines" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-            <span />
-          </div>
-        </BookPage>
-      </section>
-    )
-  }
+  if (status === 'loading') return <ReaderLoader />
 
   if (status === 'missing') {
     return (
