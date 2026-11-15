@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router'
-import { BookPage, WriteLink } from '../components/BookPage.jsx'
+import { BookPage } from '../components/BookPage.jsx'
 import { PaginatedBook } from '../components/PaginatedBook.jsx'
 import { fetchPage, PAGE_CODE_PATTERN, SAMPLE_CODE } from '../pages.js'
 import { startVisitTracking } from '../tracking.js'
@@ -8,12 +8,10 @@ import { isFirebaseConfigured } from '../firebase.js'
 import { SETUP_MESSAGE } from '../constants.js'
 import SAMPLE_PAGE from '../data/samplePage.json'
 
-function ReadingPage({ code, page, isSample }) {
+function ReadingPage({ code, page }) {
   return (
     <section className="reader" data-page-count="0" data-page-index="0">
       <PaginatedBook code={code} page={page} />
-      {!isSample && <p className="reading-notice">The sender can see when this page is opened and how long it’s read.</p>}
-      <WriteLink />
     </section>
   )
 }
@@ -26,7 +24,6 @@ function NoticePage({ code, heading, title, children }) {
         <div className="fleuron" aria-hidden="true">❦</div>
         <div className="page-text page-text-plain">{children}</div>
       </BookPage>
-      <WriteLink />
     </section>
   )
 }
@@ -64,7 +61,7 @@ function Reader({ code, user, authReady }) {
     return startVisitTracking(code)
   }, [code, shouldTrack])
 
-  if (isSample) return <ReadingPage code={code} page={SAMPLE_PAGE} isSample />
+  if (isSample) return <ReadingPage code={code} page={SAMPLE_PAGE} />
 
   let status = result.code === code ? result.status : 'loading'
   if (!isFirebaseConfigured) status = 'error'
@@ -72,7 +69,7 @@ function Reader({ code, user, authReady }) {
   if (status === 'loading') {
     return (
       <section className="reader" aria-busy="true">
-        <BookPage code={code} heading="A page for you">
+        <BookPage code={code} heading="A thought for you">
           <p className="loading-text" role="status">Turning to your page…</p>
           <div className="loading-lines" aria-hidden="true">
             <span />
@@ -95,7 +92,7 @@ function Reader({ code, user, authReady }) {
 
   if (status === 'error') {
     return (
-      <NoticePage code={code} heading="A page for you" title="This page couldn’t be opened.">
+      <NoticePage code={code} heading="A thought for you" title="This page couldn’t be opened.">
         <p>{isFirebaseConfigured
           ? 'Something went wrong while fetching it. Check your connection and refresh the page.'
           : SETUP_MESSAGE}</p>

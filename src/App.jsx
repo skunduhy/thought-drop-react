@@ -6,20 +6,13 @@ import { Router } from './Router.jsx'
 import './App.css'
 
 function Masthead({ user, authReady, onSignIn }) {
-  const { pathname } = useLocation()
-  const readerCode = pathname.match(/^\/([A-Z0-9]{7})\/?$/)?.[1]
-  const showAccount = !readerCode && isFirebaseConfigured && authReady
+  const showAccount = isFirebaseConfigured && authReady
 
   return (
     <header className="masthead">
       <Link className="brand" to="/" title="Back to the cover">
         thought<em>drop</em>
       </Link>
-      {readerCode && (
-        <span className="masthead-code">
-          Page <span>{readerCode}</span>
-        </span>
-      )}
       {showAccount &&
         (user ? (
           <div className="account">
@@ -42,6 +35,8 @@ function Masthead({ user, authReady, onSignIn }) {
 }
 
 function App() {
+  const { pathname } = useLocation()
+  const readerCode = pathname.match(/^\/([A-Z0-9]{7})\/?$/)?.[1]
   const [user, setUser] = useState(null)
   const [authReady, setAuthReady] = useState(!isFirebaseConfigured)
 
@@ -61,10 +56,10 @@ function App() {
   const authProps = { user, authReady, onSignIn: signIn }
 
   return (
-    <main className="desk">
-      <Masthead {...authProps} />
+    <main className={readerCode ? 'desk reader-desk' : 'desk'}>
+      {!readerCode && <Masthead {...authProps} />}
       <Router {...authProps} />
-      <footer className="desk-footer">Made for the words you almost didn’t send.</footer>
+      {!readerCode && <footer className="desk-footer">Made for the words you almost didn’t send.</footer>}
     </main>
   )
 }

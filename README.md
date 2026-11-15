@@ -36,7 +36,7 @@ Turning a book page also updates reading progress immediately and records the pa
 
 The browser ID is a random identifier for this site's browser profile, not a hardware ID or a verified identity. A different browser or private window, or cleared local storage, will appear as a different browser. Readers without available local storage are still tracked, but cannot be grouped across visits.
 
-The rules let anyone record a visit to an existing page, but only admins can read visits. Updates can only increase the counters, and `activeMs` can't exceed the real time since the visit started. The reader page includes a short notice that the sender can see when the page is read.
+The rules let anyone record a visit to an existing page, but only admins can read visits. Updates can only increase the counters, and `activeMs` can't exceed the real time since the visit started. Reader pages show only the book and its navigation, without the site header, activity notice, writing link, or site footer. Activity tracking remains enabled.
 
 Pages are stored in the Firestore collection `pages`, with the code as the document ID:
 

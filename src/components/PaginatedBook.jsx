@@ -13,7 +13,7 @@ function ContentBlock({ block }) {
 function Sheet({ code, index, total, measuring, contentRef, children }) {
   return (
     <article className={`book-page reader-sheet${measuring ? ' measuring-sheet' : ''}`} aria-hidden={measuring || undefined}>
-      <p className="running-head"><span>Thought Drop</span><span>A page for you</span></p>
+      <p className="running-head"><span>Thought Drop</span><span>A thought for you</span></p>
       <div className="book-content page-text" ref={contentRef}>{children}</div>
       <p className="folio">— {code} · {index + 1} / {total} —</p>
     </article>
