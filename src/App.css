@@ -166,15 +166,19 @@
   margin: 0;
 }
 
-.page-text p:first-child {
+.page-opening {
   display: flow-root;
+}
+
+.page-text > .page-greeting {
+  margin-bottom: 0.7em;
 }
 
 .page-text p + p {
   text-indent: 1.6em;
 }
 
-.reader .page-text:not(.page-text-plain) p:first-child::first-letter {
+.reader .page-text:not(.page-text-plain) .page-opening::first-letter {
   float: left;
   padding: 6px 8px 0 0;
   color: #8a5a3c;
@@ -770,7 +774,7 @@
     text-indent: 1.2em;
   }
 
-  .reader .page-text:not(.page-text-plain) p:first-child::first-letter {
+  .reader .page-text:not(.page-text-plain) .page-opening::first-letter {
     padding: 4px 6px 0 0;
     font-size: 3em;
   }

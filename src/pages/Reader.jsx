@@ -37,10 +37,12 @@ function ReadingPage({ code, page, isSample }) {
         )}
         <div className="fleuron" aria-hidden="true">❦</div>
         <div className="page-text">
-          {page.greeting?.trim() && <p>{page.greeting.trim()}</p>}
-          {toParagraphs(page.message).map((paragraph, index) => (
-            <p key={index}>{paragraph}</p>
-          ))}
+          {page.greeting?.trim() && <p className="page-greeting">{page.greeting.trim()}</p>}
+          <div className="page-message">
+            {toParagraphs(page.message).map((paragraph, index) => (
+              <p className={index === 0 ? 'page-opening' : undefined} key={index}>{paragraph}</p>
+            ))}
+          </div>
         </div>
         <p className="page-signature">— {page.sender || 'someone who thought of you'}</p>
       </BookPage>
