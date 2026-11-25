@@ -10,32 +10,27 @@ function ContentBlock({ block }) {
   return <p className={className}>{block.text}</p>
 }
 
-function Sheet({ index, total, measuring, turning, contentRef, navigation, overlay, children }) {
-  const decorative = measuring || turning
+function Sheet({ index, total, measuring, contentRef, children }) {
   return (
-    <article className={`book-page reader-sheet${measuring ? ' measuring-sheet' : turning ? ' turning-sheet' : ' reader-opening'}`} aria-hidden={decorative || undefined}>
+    <article
+      className={`book-page reader-sheet${measuring ? ' measuring-sheet' : ''}`}
+      aria-hidden={measuring || undefined}
+      data-page-index={measuring ? undefined : index}
+    >
       <p className="running-head"><span>Thought Drop</span><span>A thought for you</span></p>
       <div className="book-content page-text" ref={contentRef}>{children}</div>
-      <p className="folio" role={decorative ? undefined : 'status'} aria-live={decorative ? undefined : 'polite'}>
-        Page {index + 1} / {total}
-      </p>
-      {navigation}
-      {overlay}
+      <p className="folio">Page {index + 1} / {total}</p>
     </article>
   )
 }
 
 export function PaginatedBook({ code, page }) {
   const measureRef = useRef(null)
-  const visibleRef = useRef(null)
-  const focusAfterTurn = useRef(false)
+  const listRef = useRef(null)
   const [pages, setPages] = useState([])
   const [index, setIndex] = useState(0)
-  const [turn, setTurn] = useState(null)
   const [error, setError] = useState('')
   const activeIndex = Math.min(index, Math.max(0, pages.length - 1))
-  const displayIndex = turn?.direction === 'next' ? turn.to : activeIndex
-  const displayBlocks = turn ? turn.direction === 'next' ? turn.toBlocks : turn.fromBlocks : pages[activeIndex]
 
   useLayoutEffect(() => {
     const container = measureRef.current
@@ -50,8 +45,7 @@ export function PaginatedBook({ code, page }) {
     function measure() {
       if (disposed) return
       try {
-        const next = paginateBlocks(blocks, container)
-        setPages(next)
+        setPages(paginateBlocks(blocks, container))
         setError('')
       } catch (paginationError) {
         console.error('Could not paginate the reader page.', paginationError)
@@ -70,106 +64,40 @@ export function PaginatedBook({ code, page }) {
     }
   }, [page])
 
+  // Track which page is mostly in view so reading analytics keep per-page events.
   useEffect(() => {
-    const reader = visibleRef.current?.closest('.reader')
+    const list = listRef.current
+    if (!list || !pages.length) return undefined
+    const observer = new IntersectionObserver((entries) => {
+      const visible = entries.filter((entry) => entry.isIntersecting)
+      if (!visible.length) return
+      const best = visible.reduce((a, b) => (b.intersectionRatio > a.intersectionRatio ? b : a))
+      setIndex(Number(best.target.dataset.pageIndex))
+    }, { threshold: [0.25, 0.5, 0.75, 1] })
+    list.querySelectorAll('[data-page-index]').forEach((element) => observer.observe(element))
+    return () => observer.disconnect()
+  }, [pages])
+
+  useEffect(() => {
+    const reader = listRef.current?.closest('.reader')
     if (!reader) return
     reader.dataset.pageCount = String(pages.length)
     reader.dataset.pageIndex = String(activeIndex)
     window.dispatchEvent(new CustomEvent(PAGE_CHANGE_EVENT, { detail: { code } }))
   }, [code, pages, activeIndex])
 
-  useLayoutEffect(() => {
-    if (turn || !focusAfterTurn.current) return
-    visibleRef.current?.focus({ preventScroll: true })
-    focusAfterTurn.current = false
-  }, [activeIndex, turn])
-
-  useEffect(() => {
-    if (!turn) return undefined
-    // Finish even if reduced motion is enabled while the animation is running.
-    const timer = window.setTimeout(() => {
-      focusAfterTurn.current = true
-      setIndex(Math.max(0, Math.min(turn.to, pages.length - 1)))
-      setTurn(null)
-    }, turn.total === pages.length ? 1000 : 0)
-    return () => window.clearTimeout(timer)
-  }, [turn, pages.length])
-
-  function finishTurn() {
-    if (!turn) return
-    focusAfterTurn.current = true
-    setIndex(Math.max(0, Math.min(turn.to, pages.length - 1)))
-    setTurn(null)
-  }
-
-  function turnPage(next) {
-    if (turn || next < 0 || next >= pages.length) return
-    if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-      focusAfterTurn.current = true
-      setIndex(next)
-      return
-    }
-    setTurn({
-      from: activeIndex,
-      to: next,
-      direction: next > activeIndex ? 'next' : 'previous',
-      fromBlocks: pages[activeIndex],
-      toBlocks: pages[next],
-      total: pages.length,
-    })
-  }
-
   return (
     <>
       {!page.title && <h1 className="visually-hidden">A page for you</h1>}
       <Sheet index={0} total={1} measuring contentRef={measureRef} />
       {error ? <p className="form-error" role="alert">{error}</p> : (
-        <>
-          <Sheet
-            index={displayIndex}
-            total={pages.length || 1}
-            overlay={turn && (
-              <div className="page-flip-stage" aria-hidden="true">
-                <div
-                  className={`page-flip-leaf page-flip-${turn.direction}`}
-                  onAnimationEnd={(event) => {
-                    if (event.target === event.currentTarget) finishTurn()
-                  }}
-                >
-                  <div className="page-flip-front">
-                    <Sheet index={turn.direction === 'next' ? turn.from : turn.to} total={turn.total} turning>
-                      <div>
-                        {(turn.direction === 'next' ? turn.fromBlocks : turn.toBlocks).map((block, blockIndex) => (
-                          <ContentBlock key={blockIndex} block={block} />
-                        ))}
-                      </div>
-                    </Sheet>
-                  </div>
-                  <div className="page-flip-back" />
-                </div>
-              </div>
-            )}
-            navigation={
-              <nav className="page-navigation" aria-label="Book pages">
-                <button type="button" className="page-turn-button" aria-label="Previous page" disabled={Boolean(turn) || activeIndex === 0} onClick={() => turnPage(activeIndex - 1)}>
-                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="m12 5-5 5 5 5" /></svg>
-                </button>
-                <button type="button" className="page-turn-button" aria-label="Next page" disabled={Boolean(turn) || activeIndex >= pages.length - 1} onClick={() => turnPage(activeIndex + 1)}>
-                  <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="m8 5 5 5-5 5" /></svg>
-                </button>
-              </nav>
-            }
-          >
-            <div
-              key={displayIndex}
-              ref={visibleRef}
-              tabIndex={-1}
-              aria-label={`Page ${displayIndex + 1}`}
-            >
-              {(displayBlocks || []).map((block, blockIndex) => <ContentBlock key={blockIndex} block={block} />)}
-            </div>
-          </Sheet>
-        </>
+        <div className="reader-pages" ref={listRef}>
+          {pages.map((blocks, pageIndex) => (
+            <Sheet key={pageIndex} index={pageIndex} total={pages.length}>
+              {blocks.map((block, blockIndex) => <ContentBlock key={blockIndex} block={block} />)}
+            </Sheet>
+          ))}
+        </div>
       )}
     </>
   )
