@@ -724,6 +724,44 @@ body:has(.reader-desk) {
   text-align: center;
 }
 
+.scroll-top-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 72px 0 88px;
+  padding: 8px 16px;
+  border: 1px solid #d9ccb6;
+  border-radius: 999px;
+  background: #f3ece0;
+  color: #7a5a43;
+  cursor: pointer;
+  font: inherit;
+  font-size: 14px;
+}
+
+.scroll-top-button:hover {
+  background: #e8dfcf;
+}
+
+.scroll-top-button svg {
+  width: 20px;
+  height: 20px;
+  stroke: currentColor;
+  stroke-width: 1.6;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.not-found {
+  margin: 20vh 0 0;
+  color: #8c7b69;
+  font-family: var(--font-book);
+  font-size: clamp(40px, 9vw, 96px);
+  font-style: italic;
+  font-weight: 400;
+  text-align: center;
+}
+
 .reader-loading-content {
   flex: 1;
   min-height: 0;
@@ -1051,8 +1089,16 @@ body:has(.reader-desk) {
   margin-bottom: 16px;
 }
 
+.ledger-toolbar-actions {
+  display: flex;
+  gap: 8px;
+}
+
+a.account-button {
+  text-decoration: none;
+}
+
 .ledger-toolbar p {
-  margin: 0;
   color: #8c7b69;
   font-size: 13px;
 }

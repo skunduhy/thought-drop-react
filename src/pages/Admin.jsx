@@ -124,9 +124,14 @@ function PagesLedger({ user }) {
     <>
       <div className="ledger-toolbar">
         <p>{result.status === 'ready' ? `${result.data.length} published page${result.data.length === 1 ? '' : 's'}` : ''}</p>
-        <button className="account-button" type="button" onClick={() => setRefreshCount((n) => n + 1)}>
-          Refresh
-        </button>
+        <div className="ledger-toolbar-actions">
+          <Link className="account-button" to="/write">
+            Write a page
+          </Link>
+          <button className="account-button" type="button" onClick={() => setRefreshCount((n) => n + 1)}>
+            Refresh
+          </button>
+        </div>
       </div>
       {result.status === 'loading' && <p className="ledger-status">Opening the ledger…</p>}
       {result.status === 'error' && <LoadError error={result.error} user={user} />}

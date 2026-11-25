@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
-import { Navigate, useParams } from 'react-router'
+import { useParams } from 'react-router'
 import { BookPage } from '../components/BookPage.jsx'
 import { PaginatedBook } from '../components/PaginatedBook.jsx'
+import { NotFoundPage } from './NotFound.jsx'
 import { ReaderLoader } from '../components/ReaderLoader.jsx'
 import { fetchPage, PAGE_CODE_PATTERN, SAMPLE_CODE } from '../pages.js'
 import { startVisitTracking } from '../tracking.js'
@@ -9,10 +10,24 @@ import { isFirebaseConfigured } from '../firebase.js'
 import { SETUP_MESSAGE } from '../constants.js'
 import SAMPLE_PAGE from '../data/samplePage.json'
 
+function ScrollTopButton() {
+  return (
+    <button
+      type="button"
+      className="scroll-top-button"
+      onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+    >
+      <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="m5 12 5-5 5 5" /></svg>
+      Go to top
+    </button>
+  )
+}
+
 function ReadingPage({ code, page }) {
   return (
     <section className="reader" data-page-count="0" data-page-index="0">
       <PaginatedBook code={code} page={page} />
+      <ScrollTopButton />
     </section>
   )
 }
@@ -92,6 +107,6 @@ function Reader({ code, user, authReady }) {
 
 export function ReaderRoute({ user, authReady }) {
   const { code } = useParams()
-  if (!PAGE_CODE_PATTERN.test(code)) return <Navigate to="/" replace />
+  if (!PAGE_CODE_PATTERN.test(code)) return <NotFoundPage />
   return <Reader key={code} code={code} user={user} authReady={authReady} />
 }

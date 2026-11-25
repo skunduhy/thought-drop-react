@@ -55,11 +55,13 @@ function App() {
 
   const authProps = { user, authReady, onSignIn: signIn }
 
+  const showChrome = /^\/(write|admin)(\/|$)/.test(pathname)
+
   return (
     <main className={readerCode ? 'desk reader-desk' : 'desk'}>
-      {!readerCode && <Masthead {...authProps} />}
+      {showChrome && <Masthead {...authProps} />}
       <Router {...authProps} />
-      {!readerCode && <footer className="desk-footer">Made for the words you almost didn’t send.</footer>}
+      {showChrome && <footer className="desk-footer">Made for the words you almost didn’t send.</footer>}
     </main>
   )
 }

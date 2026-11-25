@@ -3,7 +3,7 @@ import { Navigate, Route, Routes, useLocation, useParams } from 'react-router'
 import { PAGE_CODE_PATTERN } from './pages.js'
 import { AdminView } from './pages/Admin.jsx'
 import { ComposerPage } from './pages/Composer.jsx'
-import { LandingPage } from './pages/Landing.jsx'
+import { NotFoundPage } from './pages/NotFound.jsx'
 import { ReaderRoute } from './pages/Reader.jsx'
 
 function ScrollToTop() {
@@ -27,12 +27,12 @@ export function Router({ user, authReady, onSignIn }) {
     <>
       <ScrollToTop />
       <Routes>
-        <Route index element={<LandingPage />} />
+        <Route index element={<NotFoundPage />} />
         <Route path="write" element={<ComposerPage {...authProps} />} />
         <Route path="admin" element={<AdminRoute {...authProps} />} />
         <Route path="admin/:code" element={<AdminRoute {...authProps} />} />
         <Route path=":code" element={<ReaderRoute user={user} authReady={authReady} />} />
-        <Route path="*" element={<Navigate to="/" replace />} />
+        <Route path="*" element={<NotFoundPage />} />
       </Routes>
     </>
   )
