@@ -96,14 +96,15 @@ function readingProgress() {
   const reader = document.querySelector('.reader[data-page-count]')
   if (!reader) return { percent: scrollPercent(), atEnd: true }
   const count = Number(reader.dataset.pageCount)
-  const index = Number(reader.dataset.pageIndex)
-  const content = reader.querySelector('.reader-sheet:not(.measuring-sheet) .book-content')
-  if (!count || !content) return { percent: 0, atEnd: false }
-  const bounds = content.getBoundingClientRect()
-  const fraction = Math.min(1, Math.max(0, (window.innerHeight - bounds.top) / bounds.height))
+  const sheets = reader.querySelectorAll('.reader-sheet:not(.measuring-sheet)')
+  if (!count || !sheets.length) return { percent: 0, atEnd: false }
+  const first = sheets[0].getBoundingClientRect()
+  const last = sheets[sheets.length - 1].getBoundingClientRect()
+  const total = last.bottom - first.top
+  const viewed = Math.min(total, Math.max(0, window.innerHeight - first.top))
   return {
-    percent: Math.floor(((index + fraction) / count) * 100),
-    atEnd: index === count - 1 && fraction >= FINISHED_SCROLL_PERCENT / 100,
+    percent: total > 0 ? Math.floor((viewed / total) * 100) : 100,
+    atEnd: last.bottom <= window.innerHeight + 1,
   }
 }
 

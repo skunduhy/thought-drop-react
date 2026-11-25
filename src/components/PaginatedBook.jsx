@@ -64,18 +64,19 @@ export function PaginatedBook({ code, page }) {
     }
   }, [page])
 
-  // Track which page is mostly in view so reading analytics keep per-page events.
+  // Track the page under the middle of the viewport so reading analytics keep per-page events.
   useEffect(() => {
     const list = listRef.current
     if (!list || !pages.length) return undefined
-    const observer = new IntersectionObserver((entries) => {
-      const visible = entries.filter((entry) => entry.isIntersecting)
-      if (!visible.length) return
-      const best = visible.reduce((a, b) => (b.intersectionRatio > a.intersectionRatio ? b : a))
-      setIndex(Number(best.target.dataset.pageIndex))
-    }, { threshold: [0.25, 0.5, 0.75, 1] })
-    list.querySelectorAll('[data-page-index]').forEach((element) => observer.observe(element))
-    return () => observer.disconnect()
+    function update() {
+      const middle = window.innerHeight / 2
+      const sheets = [...list.querySelectorAll('[data-page-index]')]
+      const current = sheets.find((sheet) => sheet.getBoundingClientRect().bottom >= middle) || sheets[sheets.length - 1]
+      setIndex(Number(current.dataset.pageIndex))
+    }
+    update()
+    window.addEventListener('scroll', update, { passive: true })
+    return () => window.removeEventListener('scroll', update)
   }, [pages])
 
   useEffect(() => {
