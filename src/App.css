@@ -783,90 +783,74 @@ body:has(.reader-desk) {
   text-align: center;
 }
 
-.reader-loading-content {
-  flex: 1;
-  min-height: 0;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* Loading: pen, book, paperweight, paper and inkwell circle slowly around an empty centre. */
+.reader-loading {
+  min-height: 60dvh;
   justify-content: center;
-  gap: 18px;
 }
 
-.loader-book {
+.stationery-spinner {
   position: relative;
-  width: 80px;
-  height: 56px;
-  flex-shrink: 0;
-  perspective: 240px;
-}
-
-.loader-book span {
-  position: absolute;
-  top: 0;
-  width: 40px;
-  height: 56px;
-  border: 1px solid #cdb89a;
-  border-radius: 3px;
-  background: #f6eddf;
-  box-shadow: 0 4px 8px rgba(60, 40, 20, 0.1);
-}
-
-.loader-book span::before {
-  content: '';
-  position: absolute;
-  inset: 12px 7px;
-  background: repeating-linear-gradient(transparent 0 5px, #d9ccb6 5px 6px);
-}
-
-.loader-book-right,
-.loader-book-leaf {
-  left: 40px;
-}
-
-.loader-book-leaf {
-  transform-origin: left center;
-  animation: loader-leaf-turn 1.8s ease-in-out infinite;
-}
-
-.loader-dots {
-  display: flex;
-  gap: 6px;
-}
-
-.loader-dots span {
-  width: 5px;
-  height: 5px;
+  width: 120px;
+  height: 120px;
+  border: 1px dashed #d3c3a8;
   border-radius: 50%;
-  background: #b08463;
-  animation: loader-pulse 1.2s ease-in-out infinite;
+  animation: stationery-orbit 7s linear infinite;
 }
 
-.loader-dots span:nth-child(2) {
-  animation-delay: 150ms;
+.stationery-spinner span {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 34px;
+  height: 34px;
+  margin: -17px 0 0 -17px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: #fbf7ee;
+  box-shadow: 0 3px 8px rgba(60, 40, 20, 0.12);
+  transform: rotate(var(--angle)) translateY(-60px) rotate(calc(-1 * var(--angle)));
 }
 
-.loader-dots span:nth-child(3) {
-  animation-delay: 300ms;
+.stationery-spinner svg {
+  width: 20px;
+  height: 20px;
+  fill: none;
+  stroke: #8a5a3c;
+  stroke-width: 1.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  animation: stationery-orbit 7s linear infinite reverse;
 }
 
-@keyframes loader-leaf-turn {
-  0%, 15% { transform: rotateY(0); }
-  65%, 100% { transform: rotateY(-180deg); }
+@keyframes stationery-orbit {
+  to { transform: rotate(360deg); }
 }
 
-@keyframes loader-pulse {
-  0%, 100% { opacity: 0.3; }
-  50% { opacity: 1; }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .loader-book-leaf,
-  .loader-dots span {
-    animation: none;
+/* Loaded: each sheet unrolls downward from its top edge. */
+@keyframes page-roll-down {
+  from {
+    clip-path: inset(-20px -40px 100% -20px);
+    transform: translateY(-12px);
+  }
+  to {
+    clip-path: inset(-20px -40px -60px -20px);
+    transform: none;
   }
 }
 
+.reader-pages .reader-sheet {
+  animation: page-roll-down 1.8s cubic-bezier(0.25, 0.8, 0.3, 1) backwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .stationery-spinner,
+  .stationery-spinner svg,
+  .reader-pages .reader-sheet {
+    animation: none;
+  }
+}
 .share-result-note {
   margin: -6px 0 14px;
   color: #7a6a58;
