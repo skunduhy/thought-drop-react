@@ -106,6 +106,10 @@ export async function deletePage(code) {
   await deleteDoc(doc(db, 'pages', code))
 }
 
+export function clearPageActivity(code) {
+  return deleteAllDocs(collection(db, 'pages', code, 'visits'))
+}
+
 export async function listPagesWithActivity() {
   const snapshot = await getDocs(query(collection(db, 'pages'), orderBy('createdAt', 'desc'), limit(100)))
   return Promise.all(

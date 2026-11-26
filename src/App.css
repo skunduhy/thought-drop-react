@@ -7,6 +7,7 @@
   background:
     radial-gradient(ellipse at 50% 0%, rgba(255, 250, 240, 0.75), transparent 60%),
     #e8dfcf;
+  background-attachment: fixed;
 }
 
 .masthead {
@@ -52,6 +53,7 @@
     radial-gradient(ellipse var(--reader-shape-right, 26% 36% at 102% 100%), rgba(194, 178, 155, 0.28) 72%, transparent 72.3%),
     radial-gradient(ellipse var(--reader-shape-bottom, 32% 24% at 8% 108%), rgba(154, 106, 75, 0.09) 70%, transparent 70.3%),
     #e8dfcf;
+  background-attachment: fixed;
 }
 
 body:has(.reader-desk) {
@@ -85,6 +87,24 @@ body:has(.reader-desk) {
     0 26px 50px -14px rgba(60, 40, 20, 0.38);
 }
 
+.page-flourish {
+  position: relative;
+  flex-shrink: 0;
+  height: 30px;
+  margin: 0 0 32px;
+  background: linear-gradient(90deg, transparent, #b8956f) 0 27px / calc(100% - 27px) 1px no-repeat;
+}
+
+/* A fountain pen whose nib rests on the end of the line. */
+.page-flourish::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Cg transform='translate(4 36) rotate(45) translate(-6 -40)'%3E%3Crect x='2.5' y='1' width='7' height='17' rx='2' fill='%238a5a3c'/%3E%3Crect x='2.5' y='5' width='7' height='1.6' fill='%23d9b98f'/%3E%3Cpath d='M2 18h8l.5 10Q6 24 1.5 28z' fill='%23b8956f'/%3E%3Cpath d='M6 40L1.5 28Q6 24 10.5 28z' fill='%23d9b98f' stroke='%238a5a3c' stroke-width='.8' stroke-linejoin='round'/%3E%3Cpath d='M6 40v-9' stroke='%238a5a3c' stroke-width='.8'/%3E%3Ccircle cx='6' cy='30.5' r='1' fill='%238a5a3c'/%3E%3C/g%3E%3C/svg%3E") center / contain no-repeat;
+}
 .running-head {
   display: flex;
   justify-content: space-between;
@@ -205,6 +225,7 @@ body:has(.reader-desk) {
 }
 
 .reader-sheet .running-head,
+.reader-sheet .page-flourish,
 .reader-sheet .folio {
   flex-shrink: 0;
 }
@@ -893,7 +914,8 @@ body:has(.reader-desk) {
     padding: 40px 28px 36px 38px;
   }
 
-  .running-head {
+  .running-head,
+  .page-flourish {
     margin-bottom: 26px;
     font-size: 12px;
   }
@@ -999,7 +1021,8 @@ body:has(.reader-desk) {
     padding: 16px 20px 22px 28px;
   }
 
-  .reader-sheet .running-head {
+  .reader-sheet .running-head,
+  .reader-sheet .page-flourish {
     margin-bottom: 12px;
     font-size: 12px;
   }

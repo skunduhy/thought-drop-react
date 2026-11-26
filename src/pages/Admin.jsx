@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router'
 import {
+  clearPageActivity,
   deletePage,
   fetchPage,
   fetchVisits,
@@ -271,6 +272,19 @@ function PageActivity({ code, user }) {
     }
   }
 
+  async function handleClearActivity() {
+    if (!window.confirm('Clear all reader activity for this page? This can’t be undone.')) return
+    setBusy(true)
+    setActionError('')
+    try {
+      await clearPageActivity(code)
+      setRefreshCount((n) => n + 1)
+    } catch {
+      setActionError('The activity couldn’t be cleared. Check your connection and try again.')
+    }
+    setBusy(false)
+  }
+
   const browserNumbers = new Map()
   const visitsWithBrowsers = visits
     .slice()
@@ -319,6 +333,14 @@ function PageActivity({ code, user }) {
             onClick={() => setPublished(!page.published)}
           >
             {page.published ? 'Unpublish' : 'Publish again'}
+          </button>
+          <button
+            className="account-button danger"
+            type="button"
+            disabled={busy || visitsWithBrowsers.length === 0}
+            onClick={handleClearActivity}
+          >
+            Clear activity
           </button>
           <button className="account-button danger" type="button" disabled={busy} onClick={handleDelete}>
             Delete page

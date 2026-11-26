@@ -94,7 +94,7 @@ function Reader({ code, user, authReady }) {
 
   if (status === 'error') {
     return (
-      <NoticePage heading="A thought for you" title="This page couldn’t be opened.">
+      <NoticePage title="This page couldn’t be opened.">
         <p>{isFirebaseConfigured
           ? 'Something went wrong while fetching it. Check your connection and refresh the page.'
           : SETUP_MESSAGE}</p>

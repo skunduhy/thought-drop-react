@@ -17,7 +17,7 @@ function Sheet({ index, total, measuring, contentRef, children }) {
       aria-hidden={measuring || undefined}
       data-page-index={measuring ? undefined : index}
     >
-      <p className="running-head"><span>Thought Drop</span><span>A thought for you</span></p>
+      <div className="page-flourish" aria-hidden="true" />
       <div className="book-content page-text" ref={contentRef}>{children}</div>
       <p className="folio">Page {index + 1} / {total}</p>
     </article>
